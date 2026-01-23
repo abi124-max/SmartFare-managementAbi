@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Location Test</title>
+</head>
+<body>
+    <h1>Location Dropdown Test</h1>
+    
+    <select id="fromLocation">
+        <option value="">Choose departure</option>
+    </select>
+    
+    <select id="toLocation">
+        <option value="">Choose destination</option>
+    </select>
+    
+    <button onclick="testLoad()">Load Locations</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function testLoad() {
+            document.getElementById('result').innerHTML = 'Loading...';
+            
+            try {
+                const response = await fetch('http://localhost:8081/api/buses/locations');
+                const locations = await response.json();
+                
+                document.getElementById('result').innerHTML = 'Success! Found ' + locations.length + ' locations';
+                
+                const fromSelect = document.getElementById('fromLocation');
+                const toSelect = document.getElementById('toLocation');
+                
+                locations.forEach(loc => {
+                    const opt1 = document.createElement('option');
+                    opt1.value = loc.id;
+                    opt1.textContent = loc.name;
+                    fromSelect.appendChild(opt1);
+                    
+                    const opt2 = document.createElement('option');
+                    opt2.value = loc.id;
+                    opt2.textContent = loc.name;
+                    toSelect.appendChild(opt2);
+                });
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+        
+        // Auto-load on page load
+        window.addEventListener('DOMContentLoaded', testLoad);
+    </script>
+</body>
+</html>
