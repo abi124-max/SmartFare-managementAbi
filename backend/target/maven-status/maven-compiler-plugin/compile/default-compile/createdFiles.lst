@@ -14,6 +14,7 @@ com\smartfare\SmartFareApplication.class
 com\smartfare\controller\BookingController.class
 com\smartfare\exception\GlobalExceptionHandler.class
 com\smartfare\model\Booking$BookingStatus.class
+com\smartfare\controller\HealthController.class
 com\smartfare\service\BusService.class
 com\smartfare\model\Booking.class
 com\smartfare\model\Route.class

@@ -265,13 +265,62 @@ function populateLocationDropdowns() {
     toSelect.innerHTML += option;
   });
 
+  // Add event listeners to prevent selecting same location
+  fromSelect.addEventListener('change', function() {
+    filterToDropdown(this.value);
+  });
+
+  toSelect.addEventListener('change', function() {
+    filterFromDropdown(this.value);
+  });
+
   console.log("Locations populated:", locations.length, "locations loaded");
+}
+
+function filterToDropdown(fromLocationId) {
+  const toSelect = document.getElementById("toLocation");
+  const currentValue = toSelect.value;
+  
+  toSelect.innerHTML = '<option value="">Choose destination</option>';
+  
+  locations.forEach((location) => {
+    if (location.id != fromLocationId) {
+      const option = `<option value="${location.id}">${location.name}</option>`;
+      toSelect.innerHTML += option;
+    }
+  });
+  
+  // Restore previous selection if it's still valid
+  if (currentValue && currentValue != fromLocationId) {
+    toSelect.value = currentValue;
+  }
+}
+
+function filterFromDropdown(toLocationId) {
+  const fromSelect = document.getElementById("fromLocation");
+  const currentValue = fromSelect.value;
+  
+  fromSelect.innerHTML = '<option value="">Choose departure point</option>';
+  
+  locations.forEach((location) => {
+    if (location.id != toLocationId) {
+      const option = `<option value="${location.id}">${location.name}</option>`;
+      fromSelect.innerHTML += option;
+    }
+  });
+  
+  // Restore previous selection if it's still valid
+  if (currentValue && currentValue != toLocationId) {
+    fromSelect.value = currentValue;
+  }
 }
 
 async function searchBuses() {
   const fromLocationId = document.getElementById("fromLocation").value;
   const toLocationId = document.getElementById("toLocation").value;
   const travelDate = document.getElementById("travelDate").value;
+
+  console.log("Search parameters:", { fromLocationId, toLocationId, travelDate });
 
   if (!fromLocationId || !toLocationId || !travelDate) {
     showToast("Please fill in all fields", "warning");
@@ -289,16 +338,31 @@ async function searchBuses() {
       "Searching buses...",
       "Finding the best buses for your journey"
     );
-    const response = await fetch(
-      `${API_BASE_URL}/buses/search?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}&travelDate=${travelDate}`
-    );
+    
+    const apiUrl = `${API_BASE_URL}/buses/search?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}&travelDate=${travelDate}`;
+    console.log("Making API call to:", apiUrl);
+    
+    const response = await fetch(apiUrl);
+    console.log("API response status:", response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const buses = await response.json();
+    console.log("Buses received:", buses);
+    console.log("Number of buses:", buses.length);
 
     displayBusResults(buses);
     displayRouteInfo(fromLocationId, toLocationId, travelDate);
     showStep("busSelection");
     updateProgress(2);
-    showToast(`Found ${buses.length} buses for your route`);
+    
+    if (buses.length > 0) {
+      showToast(`Found ${buses.length} buses for your route!`, "success");
+    } else {
+      showToast("No buses found for the selected route and date", "warning");
+    }
   } catch (error) {
     console.error("Error searching buses:", error);
     showToast("Failed to search buses. Please try again.", "error");
@@ -334,9 +398,15 @@ function displayRouteInfo(fromLocationId, toLocationId, travelDate) {
 
 function displayBusResults(buses) {
   const resultsContainer = document.getElementById("busResults");
-  if (!resultsContainer) return;
+  if (!resultsContainer) {
+    console.error("busResults container not found!");
+    return;
+  }
+
+  console.log("displayBusResults called with:", buses.length, "buses");
 
   if (buses.length === 0) {
+    console.log("No buses to display - showing empty message");
     resultsContainer.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: var(--gray-600);">
                 <div style="font-size: 48px; margin-bottom: 16px;">🚌</div>
@@ -347,15 +417,30 @@ function displayBusResults(buses) {
     return;
   }
 
+  console.log("Creating bus cards for", buses.length, "buses");
+
   // Store buses for filtering
   window.allBuses = buses;
 
-  resultsContainer.innerHTML = buses
-    .map((bus) => {
-      const seatStatus = getSeatStatus(bus.availableSeats, bus.bus.totalSeats);
-      return createBusCard(bus, seatStatus);
-    })
-    .join("");
+  try {
+    resultsContainer.innerHTML = buses
+      .map((bus) => {
+        console.log("Creating card for bus:", bus.bus.busNumber);
+        const seatStatus = getSeatStatus(bus.availableSeats, bus.bus.totalSeats);
+        return createBusCard(bus, seatStatus);
+      })
+      .join("");
+    
+    console.log("Bus cards created successfully");
+  } catch (error) {
+    console.error("Error creating bus cards:", error);
+    resultsContainer.innerHTML = `
+      <div style="text-align: center; padding: 60px 20px; color: var(--red-600);">
+        <h3>Error displaying buses</h3>
+        <p>Please try again.</p>
+      </div>
+    `;
+  }
 }
 
 function createBusCard(bus, seatStatus) {

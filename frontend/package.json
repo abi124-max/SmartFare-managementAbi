@@ -1,0 +1,24 @@
+{
+  "name": "smart-fare-frontend",
+  "version": "1.0.0",
+  "description": "Smart Fare Management System Frontend",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 3000 -c-1",
+    "dev": "npx http-server -p 3000 -o",
+    "build": "echo 'No build process needed for static files'"
+  },
+  "keywords": [
+    "smart-fare",
+    "bus-booking",
+    "transportation"
+  ],
+  "author": "Smart Fare Team",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
