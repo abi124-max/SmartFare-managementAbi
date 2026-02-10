@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" href="favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Fare - Chennai Bus Booking</title>
     <link rel="stylesheet" href="styles.css" />
@@ -188,27 +189,6 @@
                 />
               </div>
             </div>
-
-            <div class="seat-selection">
-              <h3>Select Your Seat</h3>
-              <div class="seat-map" id="seatMap">
-                <!-- Seat map will be generated here -->
-              </div>
-              <div class="seat-legend">
-                <div class="legend-item">
-                  <div class="seat-demo available"></div>
-                  <span>Available</span>
-                </div>
-                <div class="legend-item">
-                  <div class="seat-demo selected"></div>
-                  <span>Selected</span>
-                </div>
-                <div class="legend-item">
-                  <div class="seat-demo booked"></div>
-                  <span>Booked</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div class="step-actions">
@@ -357,620 +337,550 @@
 
     <script src="script.js"></script>
     <script>
-      // Global functions for ticket actions
-      window.downloadTicketNow = function() {
-          if (window.currentBooking && window.selectedBus) {
-              downloadTicket();
-          } else {
-              alert('No ticket data available');
-          }
-      };
-
-      window.shareTicketNow = function() {
-          if (window.currentBooking && window.selectedBus) {
-              shareTicket();
-          } else {
-              alert('No ticket data available');
-          }
-      };
-
-      // Add event listener for searchBuses button
-      document.addEventListener('DOMContentLoaded', function() {
-          const searchBtn = document.getElementById('searchBuses');
-          if (searchBtn) {
-              searchBtn.addEventListener('click', handleSearchBuses);
-          }
-      });
-
-      // Emergency fix for location loading and search functionality
-      document.addEventListener('DOMContentLoaded', function() {
-          setTimeout(() => {
-              const fromSelect = document.getElementById('fromLocation');
-              const toSelect = document.getElementById('toLocation');
-
-              if (fromSelect && toSelect) {
-                  const locations = [
-                      {id: 1, name: "Koyambedu Bus Terminal"},
-                      {id: 2, name: "Tambaram Bus Stand"},
-                      {id: 3, name: "Velachery Bus Depot"},
-                      {id: 4, name: "Broadway Bus Terminal"}
-                  ];
-
-                  // Clear and populate FROM dropdown
-                  fromSelect.innerHTML = '<option value="">Choose departure point</option>';
-                  locations.forEach(location => {
-                      const option = document.createElement('option');
-                      option.value = location.id;
-                      option.textContent = location.name;
-                      fromSelect.appendChild(option);
-                  });
-
-                  // Clear and populate TO dropdown
-                  toSelect.innerHTML = '<option value="">Choose destination</option>';
-                  locations.forEach(location => {
-                      const option = document.createElement('option');
-                      option.value = location.id;
-                      option.textContent = location.name;
-                      toSelect.appendChild(option);
-                  });
-
-                  console.log('Emergency location fix applied');
-              }
-          }, 500);
-      });
-
-      // Emergency search function
-      async function handleSearchBuses() {
-          const fromLocationId = document.getElementById('fromLocation').value;
-          const toLocationId = document.getElementById('toLocation').value;
-          const travelDate = document.getElementById('travelDate').value;
-
-          if (!fromLocationId || !toLocationId || !travelDate) {
-              alert('Please fill in all fields');
-              return;
-          }
-
-          if (fromLocationId === toLocationId) {
-              alert('From and To locations cannot be the same');
-              return;
-          }
-
-          try {
-              // Show loading
-              document.getElementById('loading').classList.remove('hidden');
-
-              const response = await fetch(
-                  `http://localhost:8081/api/buses/search?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}&travelDate=${travelDate}`
-              );
-              const buses = await response.json();
-
-              // Hide current step and show bus results
-              document.getElementById('locationStep').classList.remove('active');
-              document.getElementById('busSelectionStep').classList.add('active');
-
-              // Display results
-              const resultsContainer = document.getElementById('busResults');
-              if (buses.length === 0) {
-                  resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px;"><h3>No buses found</h3><p>No buses available for the selected route and date.</p></div>';
-              } else {
-                  resultsContainer.innerHTML = buses.map((bus, index) => `
-                      <div class="bus-card-modern" onclick="selectBus(${index})" style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s;">
-                          <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                              <div>
-                                  <h3 style="font-size: 18px; font-weight: 600;">${bus.bus.busNumber}</h3>
-                                  <p style="color: #666;">${bus.bus.operatorName}</p>
-                              </div>
-                              <div style="text-align: right;">
-                                  <div style="font-size: 24px; font-weight: 700; color: #2563eb;">₹${bus.fare}</div>
-                              </div>
-                          </div>
-                          <div style="display: flex; justify-content: space-between; background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                              <div>
-                                  <div style="font-weight: 600;">${formatTime(bus.departureTime)}</div>
-                                  <div style="font-size: 12px; color: #666;">${bus.route.fromLocation.name}</div>
-                              </div>
-                              <div style="text-align: center;">
-                                  <div style="font-size: 12px; color: #666;">${bus.route.estimatedDurationMinutes}m</div>
-                              </div>
-                              <div style="text-align: right;">
-                                  <div style="font-weight: 600;">${formatTime(bus.arrivalTime)}</div>
-                                  <div style="font-size: 12px; color: #666;">${bus.route.toLocation.name}</div>
-                              </div>
-                          </div>
-                          <div style="margin-top: 15px; text-align: center;">
-                              <span style="color: #22c55e; font-weight: 600;">${bus.availableSeats} seats available</span>
-                          </div>
-                      </div>
-                  `).join('');
-
-                  // Store buses globally for selection
-                  window.searchedBuses = buses;
-              }
-
-              // Update progress
-              document.querySelector('.progress-fill').style.width = '40%';
-
-          } catch (error) {
-              console.error('Error searching buses:', error);
-              alert('Failed to search buses. Please try again.');
-          } finally {
-              document.getElementById('loading').classList.add('hidden');
-          }
-      }
-
-      function formatTime(timeString) {
-          const [hours, minutes] = timeString.split(':');
-          const hour = parseInt(hours);
-          const ampm = hour >= 12 ? 'PM' : 'AM';
-          const displayHour = hour % 12 || 12;
-          return `${displayHour}:${minutes} ${ampm}`;
-      }
-
-      // Bus selection function
-      function selectBus(busIndex) {
-          const selectedBus = window.searchedBuses[busIndex];
-          window.currentSelectedBus = selectedBus;
-
-          // Highlight selected bus
-          document.querySelectorAll('.bus-card-modern').forEach((card, index) => {
-              if (index === busIndex) {
-                  card.style.borderColor = '#2563eb';
-                  card.style.backgroundColor = '#f0f4ff';
-              } else {
-                  card.style.borderColor = '#e2e8f0';
-                  card.style.backgroundColor = 'white';
-              }
-          });
-
-          // Show passenger details step
-          setTimeout(() => {
-              document.getElementById('busSelectionStep').classList.remove('active');
-              document.getElementById('passengerStep').classList.add('active');
-
-              // Display selected bus info
-              document.getElementById('selectedBusInfo').innerHTML = `
-                  <div style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%); border: 2px solid #2563eb; border-radius: 12px; padding: 20px;">
-                      <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
-                          <div>
-                              <h3 style="font-size: 18px; font-weight: 700; color: #1e293b;">${selectedBus.bus.busNumber}</h3>
-                              <p style="color: #64748b;">${selectedBus.bus.operatorName}</p>
-                          </div>
-                          <div style="text-align: right;">
-                              <div style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${selectedBus.fare}</div>
-                              <div style="font-size: 12px; color: #64748b;">per seat</div>
-                          </div>
-                      </div>
-                      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 16px; background: #f8fafc; border-radius: 12px;">
-                          <div style="text-align: center;">
-                              <div style="font-size: 16px; font-weight: 600;">${formatTime(selectedBus.departureTime)}</div>
-                              <div style="font-size: 12px; color: #64748b;">${selectedBus.route.fromLocation.name}</div>
-                          </div>
-                          <div style="text-align: center;">
-                              <div style="font-size: 16px; font-weight: 600;">${formatTime(selectedBus.arrivalTime)}</div>
-                              <div style="font-size: 12px; color: #64748b;">${selectedBus.route.toLocation.name}</div>
-                          </div>
-                      </div>
-                  </div>
-              `;
-
-              // Generate seat map
-              generateSeatMap();
-
-              // Update progress
-              document.querySelector('.progress-fill').style.width = '60%';
-          }, 300);
-      }
-
-      // Generate seat map
-      function generateSeatMap() {
-          const seatMapContainer = document.getElementById('seatMap');
-          const totalSeats = window.currentSelectedBus.bus.totalSeats;
-          const availableSeats = window.currentSelectedBus.availableSeats;
-          const bookedSeats = totalSeats - availableSeats;
-
-          let seatHTML = '';
-          for (let i = 1; i <= totalSeats; i++) {
-              const isBooked = Math.random() < (bookedSeats / totalSeats);
-              const seatClass = isBooked ? 'booked' : 'available';
-
-              seatHTML += `
-                  <div class="seat ${seatClass}" data-seat="${i}" onclick="selectSeat(${i}, this)"
-                       style="width: 40px; height: 40px; border-radius: 8px; border: 2px solid ${isBooked ? '#94a3b8' : '#cbd5e1'};
-                              background: ${isBooked ? '#e2e8f0' : 'white'}; cursor: ${isBooked ? 'not-allowed' : 'pointer'};
-                              display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;
-                              color: ${isBooked ? '#64748b' : '#374151'}; transition: all 0.15s;">
-                      ${i}
-                  </div>
-              `;
-          }
-
-          seatMapContainer.innerHTML = seatHTML;
-      }
-
-      // Seat selection
-      let selectedSeat = null;
-      function selectSeat(seatNumber, seatElement) {
-          if (seatElement.classList.contains('booked')) {
-              alert('This seat is already booked');
-              return;
-          }
-
-          // Remove previous selection
-          document.querySelectorAll('.seat.selected').forEach(seat => {
-              seat.classList.remove('selected');
-              seat.style.borderColor = '#cbd5e1';
-              seat.style.backgroundColor = 'white';
-          });
-
-          // Select new seat
-          seatElement.classList.add('selected');
-          seatElement.style.borderColor = '#2563eb';
-          seatElement.style.backgroundColor = '#2563eb';
-          seatElement.style.color = 'white';
-          selectedSeat = seatNumber;
-      }
-
-      // Add event listeners for navigation buttons
-      document.addEventListener('DOMContentLoaded', function() {
-          // Back to search button
-          document.getElementById('backToSearch').onclick = function() {
-              document.getElementById('busSelectionStep').classList.remove('active');
-              document.getElementById('locationStep').classList.add('active');
-              document.querySelector('.progress-fill').style.width = '20%';
-          };
-
-          // Back to buses button
-          document.getElementById('backToBuses').onclick = function() {
-              document.getElementById('passengerStep').classList.remove('active');
-              document.getElementById('busSelectionStep').classList.add('active');
-              document.querySelector('.progress-fill').style.width = '40%';
-          };
-
-          // Proceed to payment button
-          document.getElementById('proceedToPayment').onclick = function() {
-              const passengerName = document.getElementById('passengerName').value.trim();
-              const passengerPhone = document.getElementById('passengerPhone').value.trim();
-
-              if (!passengerName || !passengerPhone || !selectedSeat) {
-                  alert('Please fill in all details and select a seat');
-                  return;
-              }
-
-              if (!/^[+]?[\d\s-()]{10,}$/.test(passengerPhone)) {
-                  alert('Please enter a valid phone number');
-                  return;
-              }
-
-              // Show payment step
-              document.getElementById('passengerStep').classList.remove('active');
-              document.getElementById('paymentStep').classList.add('active');
-
-              // Display booking summary
-              const bus = window.currentSelectedBus;
-              document.getElementById('bookingSummary').innerHTML = `
-                  <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Booking Summary</h3>
-                  <div style="space-y: 12px;">
-                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                          <span style="color: #64748b;">Passenger</span>
-                          <span style="font-weight: 500;">${passengerName}</span>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                          <span style="color: #64748b;">Phone</span>
-                          <span style="font-weight: 500;">${passengerPhone}</span>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                          <span style="color: #64748b;">Bus</span>
-                          <span style="font-weight: 500;">${bus.bus.busNumber}</span>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                          <span style="color: #64748b;">Route</span>
-                          <span style="font-weight: 500;">${bus.route.fromLocation.name} → ${bus.route.toLocation.name}</span>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                          <span style="color: #64748b;">Seat</span>
-                          <span style="font-weight: 500;">Seat ${selectedSeat}</span>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid #d1d5db; margin-top: 16px;">
-                          <span style="font-size: 18px; font-weight: 600;">Total Amount</span>
-                          <span style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${bus.fare}</span>
-                      </div>
-                  </div>
-              `;
-
-              // Update progress
-              document.querySelector('.progress-fill').style.width = '80%';
-          };
-
-          // Back to passenger button
-          document.getElementById('backToPassenger').onclick = function() {
-              document.getElementById('paymentStep').classList.remove('active');
-              document.getElementById('passengerStep').classList.add('active');
-              document.querySelector('.progress-fill').style.width = '60%';
-          };
-
-          // Pay now button
-          document.getElementById('payNow').onclick = async function() {
-              const upiId = document.getElementById('upiId').value.trim();
-
-              if (!upiId) {
-                  alert('Please enter your UPI ID');
-                  return;
-              }
-
-              try {
-                  // Show loading
-                  document.getElementById('loading').classList.remove('hidden');
-
-                  // Simulate payment processing
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-
-                  // Create booking with proper data
-                  const bookingData = {
-                      passengerName: document.getElementById('passengerName').value.trim(),
-                      passengerPhone: document.getElementById('passengerPhone').value.trim(),
-                      scheduleId: window.currentSelectedBus.id,
-                      seatNumber: `A${selectedSeat}`
-                  };
-
-                  console.log('Sending booking data:', bookingData);
-
-                  const response = await fetch('http://localhost:8081/api/bookings/create', {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json',
-                          'Accept': 'application/json'
-                      },
-                      body: JSON.stringify(bookingData)
-                  });
-
-                  console.log('Booking response status:', response.status);
-
-                  if (!response.ok) {
-                      const errorText = await response.text();
-                      console.error('Booking error response:', errorText);
-                      throw new Error(`Booking failed: ${response.status} - ${errorText}`);
-                  }
-
-                  const booking = await response.json();
-                  console.log('Booking created:', booking);
-                  window.currentBooking = booking;
-
-                  // Update payment status
-                  try {
-                      const paymentResponse = await fetch(`http://localhost:8081/api/bookings/${booking.bookingReference}/payment`, {
-                          method: 'POST',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'Accept': 'application/json'
-                          },
-                          body: JSON.stringify({
-                              transactionId: `TXN${Date.now()}`,
-                              paymentMethod: 'UPI',
-                              upiId: upiId
-                          })
-                      });
-
-                      if (paymentResponse.ok) {
-                          const updatedBooking = await paymentResponse.json();
-                          window.currentBooking = updatedBooking;
-                          console.log('Payment updated:', updatedBooking);
-                      }
-                  } catch (paymentError) {
-                      console.warn('Payment update failed, but booking created:', paymentError);
-                  }
-
-                  // Show ticket
-                  document.getElementById('paymentStep').classList.remove('active');
-                  document.getElementById('ticketStep').classList.add('active');
-
-                  // Display ticket
-                  displayTicket();
-
-                  // Update progress
-                  document.querySelector('.progress-fill').style.width = '100%';
-
-                  alert('Payment successful! Your ticket is ready.');
-
-              } catch (error) {
-                  console.error('Payment error:', error);
-
-                  // Create a mock booking for demo purposes
-                  const mockBooking = {
-                      bookingReference: `SF${Date.now()}`,
-                      passenger: {
-                          name: document.getElementById('passengerName').value.trim(),
-                          phone: document.getElementById('passengerPhone').value.trim()
-                      },
-                      seatNumber: `A${selectedSeat}`,
-                      fareAmount: window.currentSelectedBus.fare,
-                      qrCodeData: `BOOKING:SF${Date.now()}|PASSENGER:${document.getElementById('passengerName').value}|BUS:${window.currentSelectedBus.bus.busNumber}|SEAT:A${selectedSeat}`
-                  };
-
-                  window.currentBooking = mockBooking;
-
-                  // Show ticket with mock data
-                  document.getElementById('paymentStep').classList.remove('active');
-                  document.getElementById('ticketStep').classList.add('active');
-
-                  // Display mock ticket
-                  displayMockTicket();
-
-                  // Update progress
-                  document.querySelector('.progress-fill').style.width = '100%';
-
-                  alert('Demo mode: Payment simulated successfully! Your mock ticket is ready.');
-              } finally {
-                  document.getElementById('loading').classList.add('hidden');
-              }
-          };
-
-          // New booking button
-      async function displayTicket() {
-          const ticketBody = document.getElementById('ticketBody');
-          const bus = window.currentSelectedBus;
-          const booking = window.currentBooking;
-
-          ticketBody.innerHTML = `
-              <div style="display: grid; gap: 16px;">
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Booking Reference</span>
-                      <span style="font-weight: 700; color: #2563eb; font-family: monospace;">${booking.bookingReference}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Passenger Name</span>
-                      <span style="font-weight: 600;">${booking.passenger.name}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Bus Number</span>
-                      <span style="font-weight: 600;">${bus.bus.busNumber}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Route</span>
-                      <span style="font-weight: 600;">${bus.route.fromLocation.name} → ${bus.route.toLocation.name}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Seat Number</span>
-                      <span style="font-weight: 600;">${booking.seatNumber}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid #2563eb; margin-top: 8px;">
-                      <span style="font-size: 18px; font-weight: 700;">Total Fare</span>
-                      <span style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${booking.fareAmount}</span>
-                  </div>
-              </div>
-          `;
-
-          // Load QR code from backend using ZXing
-          try {
-              console.log('Fetching QR code for booking:', booking.bookingReference);
-              const response = await fetch(`http://localhost:8081/api/bookings/${booking.bookingReference}/qr`);
-
-              if (!response.ok) {
-                  throw new Error(`QR API failed: ${response.status}`);
-              }
-
-              const qrData = await response.json();
-              console.log('QR code received from backend');
-
-              document.getElementById('ticketQR').innerHTML = `
-                  <h4>Scan QR Code</h4>
-                  <div style="display: inline-block; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                      <img src="${qrData.qrCode}" alt="Ticket QR Code" style="width: 200px; height: 200px; display: block;">
-                  </div>
-                  <p>Show this QR code to the conductor</p>
-              `;
-          } catch (error) {
-              console.error('Error loading QR code from backend:', error);
-              // Fallback: Use online QR API with proper booking data
-              const qrDataString = booking.qrCodeData || `BOOKING:${booking.bookingReference}|PASSENGER:${booking.passenger.name}|BUS:${bus.bus.busNumber}|SEAT:${booking.seatNumber}|DATE:${document.getElementById('travelDate').value}|FARE:${booking.fareAmount}`;
-              const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataString)}`;
-
-              document.getElementById('ticketQR').innerHTML = `
-                  <h4>Scan QR Code</h4>
-                  <div style="display: inline-block; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                      <img src="${qrApiUrl}" alt="Ticket QR Code" style="width: 200px; height: 200px; display: block;">
-                  </div>
-                  <p>Show this QR code to the conductor</p>
-              `;
-          }
-      }
-
-      // Display mock ticket for demo
-      function displayMockTicket() {
-          const ticketBody = document.getElementById('ticketBody');
-          const bus = window.currentSelectedBus;
-          const booking = window.currentBooking;
-
-          ticketBody.innerHTML = `
-              <div style="display: grid; gap: 16px;">
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Booking Reference</span>
-                      <span style="font-weight: 700; color: #2563eb; font-family: monospace;">${booking.bookingReference}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Passenger Name</span>
-                      <span style="font-weight: 600;">${booking.passenger.name}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Phone Number</span>
-                      <span style="font-weight: 600;">${booking.passenger.phone}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Bus Number</span>
-                      <span style="font-weight: 600;">${bus.bus.busNumber}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Operator</span>
-                      <span style="font-weight: 600;">${bus.bus.operatorName}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Route</span>
-                      <span style="font-weight: 600;">${bus.route.fromLocation.name} → ${bus.route.toLocation.name}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Seat Number</span>
-                      <span style="font-weight: 600;">${booking.seatNumber}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: #64748b; font-weight: 500;">Departure Time</span>
-                      <span style="font-weight: 600;">${formatTime(bus.departureTime)}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid #2563eb; margin-top: 8px;">
-                      <span style="font-size: 18px; font-weight: 700;">Total Fare</span>
-                      <span style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${booking.fareAmount}</span>
-                  </div>
-              </div>
-          `;
-
-          displayMockQR();
-      }
-
-      // Display mock QR code
-      function displayMockQR() {
-          document.getElementById('ticketQR').innerHTML = `
-              <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">Scan QR Code</h4>
-              <div style="display: inline-block; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                  <canvas id="qrCanvas" width="200" height="200" style="border: 1px solid #e2e8f0;"></canvas>
-              </div>
-              <p style="font-size: 14px; color: #64748b; margin-top: 16px; font-weight: 500;">
-                  Show this QR code to the conductor
-              </p>
-          `;
-
-          // Draw a QR-like pattern
-          const canvas = document.getElementById('qrCanvas');
-          const ctx = canvas.getContext('2d');
-
-          // Fill white background
-          ctx.fillStyle = 'white';
-          ctx.fillRect(0, 0, 200, 200);
-
-          // Draw QR-like pattern
-          ctx.fillStyle = 'black';
-          const cellSize = 8;
-          for (let i = 0; i < 25; i++) {
-              for (let j = 0; j < 25; j++) {
-                  const hash = (window.currentBooking.bookingReference.charCodeAt(i % window.currentBooking.bookingReference.length) + i + j) % 3;
-                  if (hash === 0) {
-                      ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
-                  }
-              }
-          }
-
-          // Add corner squares
-          ctx.fillRect(0, 0, 56, 56);
-          ctx.fillRect(144, 0, 56, 56);
-          ctx.fillRect(0, 144, 56, 56);
-
-          ctx.fillStyle = 'white';
-          ctx.fillRect(8, 8, 40, 40);
-          ctx.fillRect(152, 8, 40, 40);
-          ctx.fillRect(8, 152, 40, 40);
-
-          ctx.fillStyle = 'black';
-          ctx.fillRect(16, 16, 24, 24);
-          ctx.fillRect(160, 16, 24, 24);
-          ctx.fillRect(16, 160, 24, 24);
-      }
+            // Global functions for ticket actions
+            window.downloadTicketNow = function() {
+                if (window.currentBooking && window.selectedBus) {
+                    downloadTicket();
+                } else {
+                    alert('No ticket data available');
+                }
+            };
+
+            window.shareTicketNow = function() {
+                if (window.currentBooking && window.selectedBus) {
+                    shareTicket();
+                } else {
+                    alert('No ticket data available');
+                }
+            };
+
+            // Add event listener for searchBuses button
+            document.addEventListener('DOMContentLoaded', function() {
+                const searchBtn = document.getElementById('searchBuses');
+                if (searchBtn) {
+                    searchBtn.addEventListener('click', handleSearchBuses);
+                }
+            });
+
+            // Emergency fix for location loading and search functionality
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(() => {
+                    const fromSelect = document.getElementById('fromLocation');
+                    const toSelect = document.getElementById('toLocation');
+
+                    if (fromSelect && toSelect) {
+                        const locations = [
+                            {id: 1, name: "Koyambedu Bus Terminal"},
+                            {id: 2, name: "Tambaram Bus Stand"},
+                            {id: 3, name: "Velachery Bus Depot"},
+                            {id: 4, name: "Broadway Bus Terminal"}
+                        ];
+
+                        // Clear and populate FROM dropdown
+                        fromSelect.innerHTML = '<option value="">Choose departure point</option>';
+                        locations.forEach(location => {
+                            const option = document.createElement('option');
+                            option.value = location.id;
+                            option.textContent = location.name;
+                            fromSelect.appendChild(option);
+                        });
+
+                        // Clear and populate TO dropdown
+                        toSelect.innerHTML = '<option value="">Choose destination</option>';
+                        locations.forEach(location => {
+                            const option = document.createElement('option');
+                            option.value = location.id;
+                            option.textContent = location.name;
+                            toSelect.appendChild(option);
+                        });
+
+                        console.log('Emergency location fix applied');
+                    }
+                }, 500);
+            });
+
+            // Emergency search function
+            async function handleSearchBuses() {
+                const fromLocationId = document.getElementById('fromLocation').value;
+                const toLocationId = document.getElementById('toLocation').value;
+                const travelDate = document.getElementById('travelDate').value;
+
+                if (!fromLocationId || !toLocationId || !travelDate) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                if (fromLocationId === toLocationId) {
+                    alert('From and To locations cannot be the same');
+                    return;
+                }
+
+                try {
+                    // Show loading
+                    document.getElementById('loading').classList.remove('hidden');
+
+                    const response = await fetch(
+                        `http://localhost:8081/api/buses/search?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}&travelDate=${travelDate}`
+                    );
+                    const buses = await response.json();
+
+                    // Hide current step and show bus results
+                    document.getElementById('locationStep').classList.remove('active');
+                    document.getElementById('busSelectionStep').classList.add('active');
+
+                    // Display results
+                    const resultsContainer = document.getElementById('busResults');
+                    if (buses.length === 0) {
+                        resultsContainer.innerHTML = '<div style="text-align: center; padding: 40px;"><h3>No buses found</h3><p>No buses available for the selected route and date.</p></div>';
+                    } else {
+                        resultsContainer.innerHTML = buses.map((bus, index) => `
+                            <div class="bus-card-modern" onclick="selectBus(${index})" style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                    <div>
+                                        <h3 style="font-size: 18px; font-weight: 600;">${bus.bus.busNumber}</h3>
+                                        <p style="color: #666;">${bus.bus.operatorName}</p>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 24px; font-weight: 700; color: #2563eb;">₹${bus.fare}</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                    <div>
+                                        <div style="font-weight: 600;">${formatTime(bus.departureTime)}</div>
+                                        <div style="font-size: 12px; color: #666;">${bus.route.fromLocation.name}</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 12px; color: #666;">${bus.route.estimatedDurationMinutes}m</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 600;">${formatTime(bus.arrivalTime)}</div>
+                                        <div style="font-size: 12px; color: #666;">${bus.route.toLocation.name}</div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 15px; text-align: center;">
+                                    <span style="color: #22c55e; font-weight: 600;">${bus.availableSeats} seats available</span>
+                                </div>
+                            </div>
+                        `).join('');
+
+                        // Store buses globally for selection
+                        window.searchedBuses = buses;
+                    }
+
+                    // Update progress
+                    document.querySelector('.progress-fill').style.width = '40%';
+
+                } catch (error) {
+                    console.error('Error searching buses:', error);
+                    alert('Failed to search buses. Please try again.');
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
+                }
+            }
+
+            function formatTime(timeString) {
+                const [hours, minutes] = timeString.split(':');
+                const hour = parseInt(hours);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 || 12;
+                return `${displayHour}:${minutes} ${ampm}`;
+            }
+
+            // Bus selection function
+            function selectBus(busIndex) {
+                const selectedBus = window.searchedBuses[busIndex];
+                window.currentSelectedBus = selectedBus;
+
+                // Highlight selected bus
+                document.querySelectorAll('.bus-card-modern').forEach((card, index) => {
+                    if (index === busIndex) {
+                        card.style.borderColor = '#2563eb';
+                        card.style.backgroundColor = '#f0f4ff';
+                    } else {
+                        card.style.borderColor = '#e2e8f0';
+                        card.style.backgroundColor = 'white';
+                    }
+                });
+
+                // Show passenger details step
+                setTimeout(() => {
+                    document.getElementById('busSelectionStep').classList.remove('active');
+                    document.getElementById('passengerStep').classList.add('active');
+
+                    // Display selected bus info
+                    document.getElementById('selectedBusInfo').innerHTML = `
+                        <div style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%); border: 2px solid #2563eb; border-radius: 12px; padding: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                                <div>
+                                    <h3 style="font-size: 18px; font-weight: 700; color: #1e293b;">${selectedBus.bus.busNumber}</h3>
+                                    <p style="color: #64748b;">${selectedBus.bus.operatorName}</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${selectedBus.fare}</div>
+                                    <div style="font-size: 12px; color: #64748b;">per seat</div>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 16px; background: #f8fafc; border-radius: 12px;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 16px; font-weight: 600;">${formatTime(selectedBus.departureTime)}</div>
+                                    <div style="font-size: 12px; color: #64748b;">${selectedBus.route.fromLocation.name}</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 16px; font-weight: 600;">${formatTime(selectedBus.arrivalTime)}</div>
+                                    <div style="font-size: 12px; color: #64748b;">${selectedBus.route.toLocation.name}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Update progress
+                    document.querySelector('.progress-fill').style.width = '60%';
+                }, 300);
+            }
+
+            // Add event listeners for navigation buttons
+            document.addEventListener('DOMContentLoaded', function() {
+                // Back to search button
+                document.getElementById('backToSearch').onclick = function() {
+                    document.getElementById('busSelectionStep').classList.remove('active');
+                    document.getElementById('locationStep').classList.add('active');
+                    document.querySelector('.progress-fill').style.width = '20%';
+                };
+
+                // Back to buses button
+                document.getElementById('backToBuses').onclick = function() {
+                    document.getElementById('passengerStep').classList.remove('active');
+                    document.getElementById('busSelectionStep').classList.add('active');
+                    document.querySelector('.progress-fill').style.width = '40%';
+                };
+
+                // Proceed to payment button
+                document.getElementById('proceedToPayment').onclick = function() {
+                    const passengerName = document.getElementById('passengerName').value.trim();
+                    const passengerPhone = document.getElementById('passengerPhone').value.trim();
+
+                    if (!passengerName || !passengerPhone) {
+                        alert('Please fill in all details');
+                        return;
+                    }
+
+                    if (!/^[+]?[\d\s-()]{10,}$/.test(passengerPhone)) {
+                        alert('Please enter a valid phone number');
+                        return;
+                    }
+
+                    // Show payment step
+                    document.getElementById('passengerStep').classList.remove('active');
+                    document.getElementById('paymentStep').classList.add('active');
+
+                    // Display booking summary
+                    const bus = window.currentSelectedBus;
+                    document.getElementById('bookingSummary').innerHTML = `
+                        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Booking Summary</h3>
+                        <div style="space-y: 12px;">
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="color: #64748b;">Passenger</span>
+                                <span style="font-weight: 500;">${passengerName}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="color: #64748b;">Phone</span>
+                                <span style="font-weight: 500;">${passengerPhone}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="color: #64748b;">Bus</span>
+                                <span style="font-weight: 500;">${bus.bus.busNumber}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                                <span style="color: #64748b;">Route</span>
+                                <span style="font-weight: 500;">${bus.route.fromLocation.name} → ${bus.route.toLocation.name}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid #d1d5db; margin-top: 16px;">
+                                <span style="font-size: 18px; font-weight: 600;">Total Amount</span>
+                                <span style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${bus.fare}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    // Update progress
+                    document.querySelector('.progress-fill').style.width = '80%';
+                };
+
+                // Back to passenger button
+                document.getElementById('backToPassenger').onclick = function() {
+                    document.getElementById('paymentStep').classList.remove('active');
+                    document.getElementById('passengerStep').classList.add('active');
+                    document.querySelector('.progress-fill').style.width = '60%';
+                };
+
+                // Pay now button
+                document.getElementById('payNow').onclick = async function() {
+                    const upiId = document.getElementBy').value.trim();
+
+      Id('upiId              if (!upiId) {
+                        alert('Please enter your UPI ID');
+                        return;
+                    }
+
+                    try {
+                        // Show loading
+                        document.getElementById('loading').classList.remove('hidden');
+
+                        // Simulate payment processing
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+
+                        // Create booking with proper data
+                        const bookingData = {
+                            passengerName: document.getElementById('passengerName').value.trim(),
+                            passengerPhone: document.getElementById('passengerPhone').value.trim(),
+                            scheduleId: window.currentSelectedBus.id
+                        };
+
+                        console.log('Sending booking data:', bookingData);
+
+                        const response = await fetch('http://localhost:8081/api/bookings/create', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(bookingData)
+                        });
+
+                        console.log('Booking response status:', response.status);
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('Booking error response:', errorText);
+                            throw new Error(`Booking failed: ${response.status} - ${errorText}`);
+                        }
+
+                        const booking = await response.json();
+                        console.log('Booking created:', booking);
+                        window.currentBooking = booking;
+
+                        // Update payment status
+                        try {
+                            const paymentResponse = await fetch(`http://localhost:8081/api/bookings/${booking.bookingReference}/payment`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    transactionId: `TXN${Date.now()}`,
+                                    paymentMethod: 'UPI',
+                                    upiId: upiId
+                                })
+                            });
+
+                            if (paymentResponse.ok) {
+                                const updatedBooking = await paymentResponse.json();
+                                window.currentBooking = updatedBooking;
+                                console.log('Payment updated:', updatedBooking);
+                            }
+                        } catch (paymentError) {
+                            console.warn('Payment update failed, but booking created:', paymentError);
+                        }
+
+                        // Show ticket
+                        document.getElementById('paymentStep').classList.remove('active');
+                        document.getElementById('ticketStep').classList.add('active');
+
+                        // Display ticket
+                        displayTicket();
+
+                        // Update progress
+                        document.querySelector('.progress-fill').style.width = '100%';
+
+                        alert('Payment successful! Your ticket is ready.');
+
+                    } catch (error) {
+                        console.error('Payment error:', error);
+
+                        // Create a mock booking for demo purposes
+                        const mockBooking = {
+                            bookingReference: `SF${Date.now()}`,
+                            passenger: {
+                                name: document.getElementById('passengerName').value.trim(),
+                                phone: document.getElementById('passengerPhone').value.trim()
+                            },
+                            fareAmount: window.currentSelectedBus.fare,
+                            qrCodeData: `BOOKING:SF${Date.now()}|PASSENGER:${document.getElementById('passengerName').value}|BUS:${window.currentSelectedBus.bus.busNumber}`
+                        };
+
+                        window.currentBooking = mockBooking;
+
+                        // Show ticket with mock data
+                        document.getElementById('paymentStep').classList.remove('active');
+                        document.getElementById('ticketStep').classList.add('active');
+
+                        // Display mock ticket
+                        displayMockTicket();
+
+                        // Update progress
+                        document.querySelector('.progress-fill').style.width = '100%';
+
+                        alert('Demo mode: Payment simulated successfully! Your mock ticket is ready.');
+                    } finally {
+                        document.getElementById('loading').classList.add('hidden');
+                    }
+                };
+            });
+
+            async function displayTicket() {
+                const ticketBody = document.getElementById('ticketBody');
+                const bus = window.currentSelectedBus;
+                const booking = window.currentBooking;
+
+                ticketBody.innerHTML = `
+                    <div style="display: grid; gap: 16px;">
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Booking Reference</span>
+                            <span style="font-weight: 700; color: #2563eb; font-family: monospace;">${booking.bookingReference}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Passenger Name</span>
+                            <span style="font-weight: 600;">${booking.passenger.name}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Bus Number</span>
+                            <span style="font-weight: 600;">${bus.bus.busNumber}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Route</span>
+                            <span style="font-weight: 600;">${bus.route.fromLocation.name} → ${bus.route.toLocation.name}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid #2563eb; margin-top: 8px;">
+                            <span style="font-size: 18px; font-weight: 700;">Total Fare</span>
+                            <span style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${booking.fareAmount}</span>
+                        </div>
+                    </div>
+                `;
+
+                // Load QR code from backend using ZXing
+                try {
+                    console.log('Fetching QR code for booking:', booking.bookingReference);
+                    const response = await fetch(`http://localhost:8081/api/bookings/${booking.bookingReference}/qr`);
+
+                    if (!response.ok) {
+                        throw new Error(`QR API failed: ${response.status}`);
+                    }
+
+                    const qrData = await response.json();
+                    console.log('QR code received from backend');
+
+                    document.getElementById('ticketQR').innerHTML = `
+                        <h4>Scan QR Code</h4>
+                        <div style="display: inline-block; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 6 -1px rgba(0, 0, 0, 0.1);">
+                            <img src="${qrData.qrCode}" alt="Ticket QR Code" style="width: 200px; height: 200px; display: block;">
+                        </div>
+                        <p>Show this QR code to the conductor</p>
+                    `;
+                } catch (error) {
+                    console.error('Error loading QR code from backend:', error);
+                    // Fallback: Use online QR API with proper booking data
+                    const qrDataString = booking.qrCodeData || `BOOKING:${booking.bookingReference}|PASSENGER:${booking.passenger.name}|BUS:${bus.bus.busNumber}|DATE:${document.getElementById('travelDate').value}|FARE:${booking.fareAmount}`;
+                    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataString)}`;
+
+                    document.getElementById('ticketQR').innerHTML = `
+                        <h4>Scan QR Code</h4>
+                        <div style="display: inline-block; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 6 -1px rgba(0, 0, 0, 0.1);">
+                            <img src="${qrApiUrl}" alt="Ticket QR Code" style="width: 200px; height: 200px; display: block;">
+                        </div>
+                        <p>Show this QR code to the conductor</p>
+                    `;
+                }
+            }
+
+            // Display mock ticket for demo
+            function displayMockTicket() {
+                const ticketBody = document.getElementById('ticketBody');
+                const bus = window.currentSelectedBus;
+                const booking = window.currentBooking;
+
+                ticketBody.innerHTML = `
+                    <div style="display: grid; gap: 16px;">
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Booking Reference</span>
+                            <span style="font-weight: 700; color: #2563eb; font-family: monospace;">${booking.bookingReference}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Passenger Name</span>
+                            <span style="font-weight: 600;">${booking.passenger.name}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Phone Number</span>
+                            <span style="font-weight: 600;">${booking.passenger.phone}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Bus Number</span>
+                            <span style="font-weight: 600;">${bus.bus.busNumber}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Operator</span>
+                            <span style="font-weight: 600;">${bus.bus.operatorName}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-weight: 500;">Route</span>
+                            <span style="font-weight: 600;">${bus.route.fromLocation.name} → ${bus.route.toLocation.name}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid #2563eb; margin-top: 8px;">
+                            <span style="font-size: 18px; font-weight: 700;">Total Fare</span>
+                            <span style="font-size: 24px; font-weight: 800; color: #2563eb;">₹${booking.fareAmount}</span>
+                        </div>
+                    </div>
+                `;
+
+                displayMockQR();
+            }
+
+            // Display mock QR code
+            function displayMockQR() {
+                document.getElementById('ticketQR').innerHTML = `
+                    <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">Scan QR Code</h4>
+                    <div style="display: inline-block; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 6 -1px rgba(0, 0, 0, 0.1);">
+                        <canvas id="qrCanvas" width="200" height="200" style="border: 1px solid #e2e8f0;"></canvas>
+                    </div>
+                    <p style="font-size: 14px; color: #64748b; margin-top: 16px; font-weight: 500;">
+                        Show this QR code to the conductor
+                    </p>
+                `;
+
+                // Draw a QR-like pattern
+                const canvas = document.getElementById('qrCanvas');
+                const ctx = canvas.getContext('2d');
+
+                // Fill white background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, 200, 200);
+
+                // Draw QR-like pattern
+                ctx.fillStyle = 'black';
+                const cellSize = 8;
+                for (let i = 0; i < 25; i++) {
+                    for (let j = 0; j < 25; j++) {
+                        const hash = (window.currentBooking.bookingReference.charCodeAt(i % window.currentBooking.bookingReference.length) + i + j) % 3;
+                        if (hash === 0) {
+                            ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
+                        }
+                    }
+                }
+
+                // Add corner squares
+                ctx.fillRect(0, 0, 56, 56);
+                ctx.fillRect(144, 0, 56, 56);
+                ctx.fillRect(0, 144, 56, 56);
+
+                ctx.fillStyle = 'white';
+                ctx.fillRect(8, 8, 40, 40);
+                ctx.fillRect(152, 8, 40, 40);
+                ctx.fillRect(8, 152, 40, 40);
+
+                ctx.fillStyle = 'black';
+                ctx.fillRect(16, 16, 24, 24);
+                ctx.fillRect(160, 16, 24, 24);
+                ctx.fillRect(16, 160, 24, 24);
+            }
     </script>
   </body>
 </html>

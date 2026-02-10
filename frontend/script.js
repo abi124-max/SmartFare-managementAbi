@@ -266,11 +266,11 @@ function populateLocationDropdowns() {
   });
 
   // Add event listeners to prevent selecting same location
-  fromSelect.addEventListener('change', function() {
+  fromSelect.addEventListener("change", function () {
     filterToDropdown(this.value);
   });
 
-  toSelect.addEventListener('change', function() {
+  toSelect.addEventListener("change", function () {
     filterFromDropdown(this.value);
   });
 
@@ -280,16 +280,16 @@ function populateLocationDropdowns() {
 function filterToDropdown(fromLocationId) {
   const toSelect = document.getElementById("toLocation");
   const currentValue = toSelect.value;
-  
+
   toSelect.innerHTML = '<option value="">Choose destination</option>';
-  
+
   locations.forEach((location) => {
     if (location.id != fromLocationId) {
       const option = `<option value="${location.id}">${location.name}</option>`;
       toSelect.innerHTML += option;
     }
   });
-  
+
   // Restore previous selection if it's still valid
   if (currentValue && currentValue != fromLocationId) {
     toSelect.value = currentValue;
@@ -299,16 +299,16 @@ function filterToDropdown(fromLocationId) {
 function filterFromDropdown(toLocationId) {
   const fromSelect = document.getElementById("fromLocation");
   const currentValue = fromSelect.value;
-  
+
   fromSelect.innerHTML = '<option value="">Choose departure point</option>';
-  
+
   locations.forEach((location) => {
     if (location.id != toLocationId) {
       const option = `<option value="${location.id}">${location.name}</option>`;
       fromSelect.innerHTML += option;
     }
   });
-  
+
   // Restore previous selection if it's still valid
   if (currentValue && currentValue != toLocationId) {
     fromSelect.value = currentValue;
@@ -320,7 +320,11 @@ async function searchBuses() {
   const toLocationId = document.getElementById("toLocation").value;
   const travelDate = document.getElementById("travelDate").value;
 
-  console.log("Search parameters:", { fromLocationId, toLocationId, travelDate });
+  console.log("Search parameters:", {
+    fromLocationId,
+    toLocationId,
+    travelDate,
+  });
 
   if (!fromLocationId || !toLocationId || !travelDate) {
     showToast("Please fill in all fields", "warning");
@@ -338,17 +342,17 @@ async function searchBuses() {
       "Searching buses...",
       "Finding the best buses for your journey"
     );
-    
+
     const apiUrl = `${API_BASE_URL}/buses/search?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}&travelDate=${travelDate}`;
     console.log("Making API call to:", apiUrl);
-    
+
     const response = await fetch(apiUrl);
     console.log("API response status:", response.status);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const buses = await response.json();
     console.log("Buses received:", buses);
     console.log("Number of buses:", buses.length);
@@ -357,7 +361,7 @@ async function searchBuses() {
     displayRouteInfo(fromLocationId, toLocationId, travelDate);
     showStep("busSelection");
     updateProgress(2);
-    
+
     if (buses.length > 0) {
       showToast(`Found ${buses.length} buses for your route!`, "success");
     } else {
@@ -426,11 +430,14 @@ function displayBusResults(buses) {
     resultsContainer.innerHTML = buses
       .map((bus) => {
         console.log("Creating card for bus:", bus.bus.busNumber);
-        const seatStatus = getSeatStatus(bus.availableSeats, bus.bus.totalSeats);
+        const seatStatus = getSeatStatus(
+          bus.availableSeats,
+          bus.bus.totalSeats
+        );
         return createBusCard(bus, seatStatus);
       })
       .join("");
-    
+
     console.log("Bus cards created successfully");
   } catch (error) {
     console.error("Error creating bus cards:", error);
@@ -681,7 +688,7 @@ function proceedToPayment() {
   const passengerName = document.getElementById("passengerName");
   const passengerPhone = document.getElementById("passengerPhone");
 
-  if (!passengerName || !passengerPhone || !selectedSeat) {
+  if (!passengerName || !passengerPhone) {
     showToast("Please fill in all details and select a seat", "warning");
     return;
   }
