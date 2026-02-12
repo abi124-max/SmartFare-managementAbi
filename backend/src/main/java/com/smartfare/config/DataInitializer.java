@@ -7,6 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,16 +17,16 @@ public class DataInitializer implements CommandLineRunner {
 
     @Autowired
     private LocationRepository locationRepository;
-    
+
     @Autowired
     private BusTypeRepository busTypeRepository;
-    
+
     @Autowired
     private BusRepository busRepository;
-    
+
     @Autowired
     private RouteRepository routeRepository;
-    
+
     @Autowired
     private BusScheduleRepository busScheduleRepository;
 
@@ -37,15 +38,16 @@ public class DataInitializer implements CommandLineRunner {
     private void initializeData() {
         try {
             System.out.println("🚀 Initializing Smart Fare database with sample data...");
-            
+
             // Check if data already exists
             if (locationRepository.count() > 0) {
-                System.out.println("✅ Database already contains " + locationRepository.count() + " locations. Skipping initialization.");
+                System.out.println("✅ Database already contains " + locationRepository.count()
+                        + " locations. Skipping initialization.");
                 return;
             }
-            
+
             System.out.println("📊 Creating fresh database with sample data...");
-            
+
             // Create locations
             List<Location> locations = new ArrayList<>();
             locations.add(createLocation("Koyambedu Bus Terminal", "Chennai", "Tamil Nadu", 13.0732, 80.1986));
@@ -94,38 +96,65 @@ public class DataInitializer implements CommandLineRunner {
             routeRepository.saveAll(routes);
             System.out.println("✅ Created 12 routes");
 
-            // Create schedules
+            // Create schedules for multiple dates (today, tomorrow, day after)
             LocalDate today = LocalDate.now();
             LocalDate tomorrow = today.plusDays(1);
+            LocalDate dayAfter = today.plusDays(2);
             List<BusSchedule> schedules = new ArrayList<>();
 
             // Today's schedules
-            schedules.add(createSchedule(buses.get(0), routes.get(0), LocalTime.of(6, 0), LocalTime.of(6, 45), new BigDecimal("45.00"), 35, today));
-            schedules.add(createSchedule(buses.get(1), routes.get(0), LocalTime.of(8, 30), LocalTime.of(9, 15), new BigDecimal("35.00"), 45, today));
-            schedules.add(createSchedule(buses.get(2), routes.get(0), LocalTime.of(14, 0), LocalTime.of(14, 45), new BigDecimal("40.00"), 40, today));
-            schedules.add(createSchedule(buses.get(3), routes.get(0), LocalTime.of(20, 0), LocalTime.of(20, 45), new BigDecimal("50.00"), 30, today));
+            schedules.add(createSchedule(buses.get(0), routes.get(0), LocalTime.of(6, 0), LocalTime.of(6, 45),
+                    new BigDecimal("45.00"), 35, today));
+            schedules.add(createSchedule(buses.get(1), routes.get(0), LocalTime.of(8, 30), LocalTime.of(9, 15),
+                    new BigDecimal("35.00"), 45, today));
+            schedules.add(createSchedule(buses.get(2), routes.get(0), LocalTime.of(14, 0), LocalTime.of(14, 45),
+                    new BigDecimal("40.00"), 40, today));
+            schedules.add(createSchedule(buses.get(3), routes.get(0), LocalTime.of(20, 0), LocalTime.of(20, 45),
+                    new BigDecimal("50.00"), 30, today));
 
-            schedules.add(createSchedule(buses.get(0), routes.get(1), LocalTime.of(7, 30), LocalTime.of(8, 15), new BigDecimal("45.00"), 38, today));
-            schedules.add(createSchedule(buses.get(1), routes.get(1), LocalTime.of(10, 0), LocalTime.of(10, 45), new BigDecimal("35.00"), 48, today));
-            schedules.add(createSchedule(buses.get(2), routes.get(1), LocalTime.of(16, 30), LocalTime.of(17, 15), new BigDecimal("40.00"), 42, today));
-            schedules.add(createSchedule(buses.get(3), routes.get(1), LocalTime.of(21, 30), LocalTime.of(22, 15), new BigDecimal("50.00"), 32, today));
+            schedules.add(createSchedule(buses.get(0), routes.get(1), LocalTime.of(7, 30), LocalTime.of(8, 15),
+                    new BigDecimal("45.00"), 38, today));
+            schedules.add(createSchedule(buses.get(1), routes.get(1), LocalTime.of(10, 0), LocalTime.of(10, 45),
+                    new BigDecimal("35.00"), 48, today));
+            schedules.add(createSchedule(buses.get(2), routes.get(1), LocalTime.of(16, 30), LocalTime.of(17, 15),
+                    new BigDecimal("40.00"), 42, today));
+            schedules.add(createSchedule(buses.get(3), routes.get(1), LocalTime.of(21, 30), LocalTime.of(22, 15),
+                    new BigDecimal("50.00"), 32, today));
 
             // Add more schedules for other routes...
-            schedules.add(createSchedule(buses.get(0), routes.get(2), LocalTime.of(7, 0), LocalTime.of(7, 35), new BigDecimal("35.00"), 38, today));
-            schedules.add(createSchedule(buses.get(2), routes.get(2), LocalTime.of(15, 30), LocalTime.of(16, 5), new BigDecimal("30.00"), 42, today));
-            schedules.add(createSchedule(buses.get(3), routes.get(2), LocalTime.of(19, 0), LocalTime.of(19, 35), new BigDecimal("40.00"), 33, today));
+            schedules.add(createSchedule(buses.get(0), routes.get(2), LocalTime.of(7, 0), LocalTime.of(7, 35),
+                    new BigDecimal("35.00"), 38, today));
+            schedules.add(createSchedule(buses.get(2), routes.get(2), LocalTime.of(15, 30), LocalTime.of(16, 5),
+                    new BigDecimal("30.00"), 42, today));
+            schedules.add(createSchedule(buses.get(3), routes.get(2), LocalTime.of(19, 0), LocalTime.of(19, 35),
+                    new BigDecimal("40.00"), 33, today));
 
             // Tomorrow's schedules (sample)
-            schedules.add(createSchedule(buses.get(0), routes.get(0), LocalTime.of(6, 0), LocalTime.of(6, 45), new BigDecimal("45.00"), 40, tomorrow));
-            schedules.add(createSchedule(buses.get(1), routes.get(0), LocalTime.of(8, 30), LocalTime.of(9, 15), new BigDecimal("35.00"), 50, tomorrow));
-            schedules.add(createSchedule(buses.get(2), routes.get(1), LocalTime.of(16, 30), LocalTime.of(17, 15), new BigDecimal("40.00"), 45, tomorrow));
-            schedules.add(createSchedule(buses.get(3), routes.get(5), LocalTime.of(21, 0), LocalTime.of(21, 30), new BigDecimal("40.00"), 35, tomorrow));
+            schedules.add(createSchedule(buses.get(0), routes.get(0), LocalTime.of(6, 0), LocalTime.of(6, 45),
+                    new BigDecimal("45.00"), 40, tomorrow));
+            schedules.add(createSchedule(buses.get(1), routes.get(0), LocalTime.of(8, 30), LocalTime.of(9, 15),
+                    new BigDecimal("35.00"), 50, tomorrow));
+            schedules.add(createSchedule(buses.get(2), routes.get(1), LocalTime.of(16, 30), LocalTime.of(17, 15),
+                    new BigDecimal("40.00"), 45, tomorrow));
+            schedules.add(createSchedule(buses.get(3), routes.get(5), LocalTime.of(21, 0), LocalTime.of(21, 30),
+                    new BigDecimal("40.00"), 35, tomorrow));
+
+            // Day after tomorrow's schedules
+            schedules.add(createSchedule(buses.get(0), routes.get(0), LocalTime.of(6, 0), LocalTime.of(6, 45),
+                    new BigDecimal("45.00"), 40, dayAfter));
+            schedules.add(createSchedule(buses.get(1), routes.get(0), LocalTime.of(8, 30), LocalTime.of(9, 15),
+                    new BigDecimal("35.00"), 50, dayAfter));
+            schedules.add(createSchedule(buses.get(2), routes.get(1), LocalTime.of(16, 30), LocalTime.of(17, 15),
+                    new BigDecimal("40.00"), 45, dayAfter));
+            schedules.add(createSchedule(buses.get(3), routes.get(5), LocalTime.of(21, 0), LocalTime.of(21, 30),
+                    new BigDecimal("40.00"), 35, dayAfter));
 
             busScheduleRepository.saveAll(schedules);
             System.out.println("✅ Created " + schedules.size() + " bus schedules");
 
             System.out.println("🎉 Smart Fare database initialization completed successfully!");
-            System.out.println("📈 Summary: " + locations.size() + " locations, " + buses.size() + " buses, " + routes.size() + " routes, " + schedules.size() + " schedules");
+            System.out.println("📈 Summary: " + locations.size() + " locations, " + buses.size() + " buses, "
+                    + routes.size() + " routes, " + schedules.size() + " schedules");
 
         } catch (Exception e) {
             System.err.println("❌ Error during database initialization: " + e.getMessage());
@@ -167,8 +196,8 @@ public class DataInitializer implements CommandLineRunner {
         return route;
     }
 
-    private BusSchedule createSchedule(Bus bus, Route route, LocalTime departure, LocalTime arrival, 
-                               BigDecimal fare, int availableSeats, LocalDate date) {
+    private BusSchedule createSchedule(Bus bus, Route route, LocalTime departure, LocalTime arrival,
+            BigDecimal fare, int availableSeats, LocalDate date) {
         BusSchedule schedule = new BusSchedule();
         schedule.setBus(bus);
         schedule.setRoute(route);
@@ -177,6 +206,8 @@ public class DataInitializer implements CommandLineRunner {
         schedule.setFare(fare);
         schedule.setAvailableSeats(availableSeats);
         schedule.setScheduleDate(date);
+        schedule.setStatus(BusSchedule.ScheduleStatus.SCHEDULED);
+        schedule.setCreatedAt(LocalDateTime.now());
         return busScheduleRepository.save(schedule);
     }
 }
