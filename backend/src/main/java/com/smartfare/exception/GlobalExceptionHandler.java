@@ -1,5 +1,4 @@
 package com.smartfare.exception;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -20,7 +19,6 @@ public class GlobalExceptionHandler {
         errorDetails.put("timestamp", LocalDateTime.now());
         errorDetails.put("message", ex.getMessage());
         errorDetails.put("details", request.getDescription(false));
-        
         System.err.println("Global Exception Handler caught: " + ex.getMessage());
         ex.printStackTrace();
         
