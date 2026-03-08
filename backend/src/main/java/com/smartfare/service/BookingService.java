@@ -48,6 +48,11 @@ public class BookingService {
             throw new RuntimeException("Bus not available or no seats left");
         }
         
+        // Auto-assign seat if not provided
+        if (seatNumber == null || seatNumber.trim().isEmpty()) {
+            seatNumber = autoAssignSeat(scheduleId, schedule.getBus().getTotalSeats());
+        }
+        
         // Check if seat is already booked
         List<String> bookedSeats = bookingRepository.findBookedSeatsBySchedule(scheduleId);
         if (bookedSeats.contains(seatNumber)) {
@@ -107,5 +112,20 @@ public class BookingService {
             booking.getSchedule().getScheduleDate(),
             booking.getFareAmount()
         );
+    }
+    
+    private String autoAssignSeat(Long scheduleId, int totalSeats) {
+        // Get already booked seats
+        List<String> bookedSeats = bookingRepository.findBookedSeatsBySchedule(scheduleId);
+        
+        // Find first available seat
+        for (int i = 1; i <= totalSeats; i++) {
+            String seatNumber = String.valueOf(i);
+            if (!bookedSeats.contains(seatNumber)) {
+                return seatNumber;
+            }
+        }
+        
+        throw new RuntimeException("No available seats");
     }
 }
