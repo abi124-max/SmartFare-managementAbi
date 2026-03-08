@@ -1,0 +1,18 @@
+# Node modules
+node_modules/
+
+# Sensitive files
+**/serviceAccountKey.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+*.log

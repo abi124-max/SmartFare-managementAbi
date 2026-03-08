@@ -1,0 +1,39 @@
+{
+  "name": "smart-fare-conductor-app",
+  "version": "1.0.0",
+  "description": "Smart Fare Conductor Application - Phase 3",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 3001 -c-1 -o",
+    "dev": "npx http-server -p 3001 -o",
+    "build": "echo 'No build process needed for static files'",
+    "serve": "npx http-server -p 3001",
+    "test": "echo 'No tests specified yet'"
+  },
+  "keywords": [
+    "smart-fare",
+    "conductor-app",
+    "bus-ticketing",
+    "qr-scanner",
+    "firebase",
+    "transportation"
+  ],
+  "author": "Smart Fare Team",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abi124-max/SmartFare-managementAbi.git"
+  },
+  "dependencies": {},
+  "browserslist": [
+    "last 2 versions",
+    "not dead",
+    "not ie <= 11"
+  ]
+}

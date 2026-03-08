@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Fare Conductor - Professional Dashboard</title>
+    <link rel="stylesheet" href="styles-professional.css">
+    <link rel="icon" href="favicon.ico">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Professional Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-bus"></i>
+                <span>Smart Fare Conductor</span>
+            </div>
+            <div class="nav-menu">
+                <button class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-page="scanner">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Scanner</span>
+                </button>
+                <button class="nav-item" data-page="tickets">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Tickets</span>
+                </button>
+                <button class="nav-item" data-page="analytics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </button>
+                <button class="nav-item" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </button>
+            </div>
+            <div class="nav-profile">
+                <div class="profile-info">
+                    <span class="conductor-name">John Conductor</span>
+                    <span class="bus-number">TN09N2345</span>
+                </div>
+                <div class="profile-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-container">
+        <!-- Dashboard Page -->
+        <div class="page" id="dashboard-page">
+            <div class="page-header">
+                <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+                <p>Real-time bus stop monitoring and validation</p>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalPassengers">0</h3>
+                        <p>Total Passengers</p>
+                    </div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="validatedTickets">0</h3>
+                        <p>Validated Tickets</p>
+                    </div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="discrepancies">0</h3>
+                        <p>Discrepancies</p>
+                    </div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-icon">
+                        <i class="fas fa-rupee-sign"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="todayRevenue">₹0</h3>
+                        <p>Today's Revenue</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Bus Stops -->
+            <div class="dashboard-content">
+                <div class="content-header">
+                    <h2><i class="fas fa-bus-stop"></i> Live Bus Stops</h2>
+                    <div class="content-actions">
+                        <button class="btn btn-primary" id="refreshDashboard">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-secondary" id="autoRefreshToggle">
+                            <i class="fas fa-play"></i> Auto Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="bus-stops-grid" id="busStopsGrid">
+                    <!-- Bus stops will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Scanner Page -->
+        <div class="page hidden" id="scanner-page">
+            <div class="page-header">
+                <h1><i class="fas fa-qrcode"></i> QR Scanner</h1>
+                <p>Scan and validate passenger tickets</p>
+            </div>
+
+            <div class="scanner-container">
+                <div class="scanner-main">
+                    <div class="scanner-viewfinder">
+                        <video id="videoElement" autoplay></video>
+                        <div class="scanner-overlay">
+                            <div class="scanner-frame">
+                                <div class="scanner-corners">
+                                    <div class="corner top-left"></div>
+                                    <div class="corner top-right"></div>
+                                    <div class="corner bottom-left"></div>
+                                    <div class="corner bottom-right"></div>
+                                </div>
+                                <div class="scanner-line"></div>
+                            </div>
+                            <div class="scanner-status">
+                                <span id="scanStatus">Ready to scan</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scanner-controls">
+                        <button class="btn btn-success btn-large" id="startScanBtn">
+                            <i class="fas fa-camera"></i> Start Scanning
+                        </button>
+                        <button class="btn btn-danger btn-large" id="stopScanBtn" disabled>
+                            <i class="fas fa-stop"></i> Stop Scanning
+                        </button>
+                        <button class="btn btn-secondary" id="uploadQRBtn">
+                            <i class="fas fa-upload"></i> Upload QR
+                        </button>
+                        <input type="file" id="qrFileInput" accept="image/*" style="display: none;">
+                    </div>
+                </div>
+                <div class="scanner-results">
+                    <div class="result-card" id="scanResult" style="display: none;">
+                        <h3><i class="fas fa-ticket-alt"></i> Ticket Details</h3>
+                        <div class="ticket-info" id="ticketInfo">
+                            <!-- Ticket details will be populated here -->
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-success" id="validateTicketBtn">
+                                <i class="fas fa-check"></i> Validate
+                            </button>
+                            <button class="btn btn-info" id="saveTicketBtn">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                            <button class="btn btn-secondary" id="clearScanBtn">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tickets Page -->
+        <div class="page hidden" id="tickets-page">
+            <div class="page-header">
+                <h1><i class="fas fa-ticket-alt"></i> Manual Ticket Issuing</h1>
+                <p>Issue tickets for passengers without mobile booking</p>
+            </div>
+
+            <div class="ticket-container">
+                <div class="ticket-form-card">
+                    <form id="ticketForm" class="ticket-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="sourceStop">
+                                    <i class="fas fa-map-marker-alt"></i> Source Stop
+                                </label>
+                                <select id="sourceStop" required>
+                                    <option value="">Select Source</option>
+                                    <option value="Koyambedu">Koyambedu Bus Terminal</option>
+                                    <option value="Tambaram">Tambaram Bus Stand</option>
+                                    <option value="Velachery">Velachery Bus Depot</option>
+                                    <option value="Broadway">Broadway Bus Terminal</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="destStop">
+                                    <i class="fas fa-map-marker-alt"></i> Destination
+                                </label>
+                                <select id="destStop" required>
+                                    <option value="">Select Destination</option>
+                                    <option value="Koyambedu">Koyambedu Bus Terminal</option>
+                                    <option value="Tambaram">Tambaram Bus Stand</option>
+                                    <option value="Velachery">Velachery Bus Depot</option>
+                                    <option value="Broadway">Broadway Bus Terminal</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="busType">
+                                    <i class="fas fa-bus"></i> Bus Type
+                                </label>
+                                <select id="busType" required>
+                                    <option value="">Select Bus Type</option>
+                                    <option value="ac_deluxe">AC Deluxe</option>
+                                    <option value="ordinary">Ordinary</option>
+                                    <option value="ac_express">AC Express</option>
+                                    <option value="volvo_ac">Volvo AC</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="passengerName">
+                                    <i class="fas fa-user"></i> Passenger Name
+                                </label>
+                                <input type="text" id="passengerName" placeholder="Enter passenger name" required>
+                            </div>
+                        </div>
+                        <div class="fare-display">
+                            <div class="fare-card">
+                                <h3>Calculated Fare</h3>
+                                <div class="fare-amount" id="fareAmount">₹0.00</div>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-success btn-large">
+                                <i class="fas fa-plus-circle"></i> Issue Ticket
+                            </button>
+                            <button type="reset" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> Reset Form
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div class="page hidden" id="analytics-page">
+            <div class="page-header">
+                <h1><i class="fas fa-chart-line"></i> Analytics</h1>
+                <p>Performance metrics and insights</p>
+            </div>
+
+            <div class="analytics-container">
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3><i class="fas fa-chart-bar"></i> Revenue Overview</h3>
+                        <div class="chart-placeholder">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3><i class="fas fa-chart-pie"></i> Ticket Distribution</h3>
+                        <div class="chart-placeholder">
+                            <canvas id="ticketChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                        <div class="activity-list" id="activityList">
+                            <!-- Activity items will be populated here -->
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3><i class="fas fa-download"></i> Export Data</h3>
+                        <div class="export-options">
+                            <button class="btn btn-info" id="exportHistoryBtn">
+                                <i class="fas fa-file-csv"></i> Export CSV
+                            </button>
+                            <button class="btn btn-warning" id="clearHistoryBtn">
+                                <i class="fas fa-trash"></i> Clear History
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page hidden" id="settings-page">
+            <div class="page-header">
+                <h1><i class="fas fa-cog"></i> Settings</h1>
+                <p>Customize your conductor experience</p>
+            </div>
+
+            <div class="settings-container">
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3><i class="fas fa-camera"></i> Scanner Settings</h3>
+                        <div class="setting-item">
+                            <label for="scanSpeed">Scan Speed</label>
+                            <select id="scanSpeed">
+                                <option value="fast">Fast</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="slow">Slow</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="autoValidate">
+                                <input type="checkbox" id="autoValidate">
+                                Auto-validate Tickets
+                            </label>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <h3><i class="fas fa-volume-up"></i> Sound & Vibration</h3>
+                        <div class="setting-item">
+                            <label for="soundEnabled">
+                                <input type="checkbox" id="soundEnabled" checked>
+                                Enable Sound Effects
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label for="vibrationEnabled">
+                                <input type="checkbox" id="vibrationEnabled" checked>
+                                Enable Vibration
+                            </label>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <h3><i class="fas fa-mobile-alt"></i> Mobile Features</h3>
+                        <div class="setting-item">
+                            <button class="btn btn-primary" id="fullscreenBtn">
+                                <i class="fas fa-expand"></i> Fullscreen Mode
+                            </button>
+                        </div>
+                        <div class="setting-item">
+                            <button class="btn btn-secondary" id="darkModeBtn">
+                                <i class="fas fa-moon"></i> Dark Mode
+                            </button>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <h3><i class="fas fa-info-circle"></i> App Info</h3>
+                        <div class="app-info">
+                            <p><strong>Version:</strong> 1.0.0</p>
+                            <p><strong>Bus:</strong> TN09N2345</p>
+                            <p><strong>Conductor:</strong> John Conductor</p>
+                            <div class="battery-status">
+                                <i class="fas fa-battery-three-quarters"></i>
+                                <span id="batteryLevel">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="notification hidden">
+        <i class="fas fa-info-circle"></i>
+        <span id="notificationMessage"></span>
+        <button id="closeNotification" class="close-btn">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- Ticket Modal -->
+    <div id="ticketModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-ticket-alt"></i> Ticket Details</h3>
+                <button id="closeModalBtn" class="btn-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Ticket details will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <script src="script-professional.js"></script>
+</body>
+</html>
