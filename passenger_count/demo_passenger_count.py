@@ -12,14 +12,14 @@ FIREBASE_CONFIG = {
 
 # Bus stop configuration - Update existing stop1
 BUS_STOP_NAME = "stop1"  # Update existing stop1
-BUS_STOP_LOCATION = "koyambedu"  # Location for stop1
+BUS_STOP_LOCATION = "Koyambedu"  # Location for stop1
 ENTRY_LINE_X = 320  # Middle of 640px frame
 CONFIDENCE_THRESHOLD = 0.5
 TRACKING_DISTANCE = 100
 
 # Initialize Firebase
 try:
-    cred_path = r"c:\Users\Abirami H\Documents\SmartFare2.0\2.0Smartfare\passenger_count\serviceAccountKey.json"
+    cred_path = r"./serviceAccountKey.json"
     cred = credentials.Certificate(cred_path)
     firebase_admin.initialize_app(cred, {
         "databaseURL": FIREBASE_CONFIG["databaseURL"]
@@ -211,7 +211,7 @@ def main():
                 try:
                     # Update with location name "koyambedu" and status "unchecked"
                     db_ref.child(BUS_STOP_NAME).update({
-                        "location": "koyambedu",  # Show location name as koyambedu
+                        "location": BUS_STOP_LOCATION,  # Show location name as koyambedu
                         "count": tracker.total_count,
                         "status": "unchecked"  # Set status to unchecked
                     })

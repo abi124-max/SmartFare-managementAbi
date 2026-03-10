@@ -2,29 +2,46 @@ import cv2
 from ultralytics import YOLO
 import firebase_admin
 from firebase_admin import credentials, db
+from datetime import datetime
 
 # Firebase initialize
 cred = credentials.Certificate("serviceAccountKey.json")
 
 firebase_admin.initialize_app(cred, {
-    "databaseURL": "https://smartbusai-bf6c1-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    "databaseURL": "https://sample-firebase-ai-app-208e2-default-rtdb.firebaseio.com/"
 })
 
-# Bus stop name - change this as needed
-BUS_STOP_NAME = "Chennai"
+# Bus stop configuration
+BUS_STOP_KEY = "stop1"  # Firebase key
+BUS_STOP_NAME = "Koyambedu"  # Location name for display
 
-def update_count(bus_stop, count):
+def update_count(bus_stop_key, count):
     try:
         ref = db.reference("bus_stops")
-        ref.update({
-            bus_stop: count
+        # Update with location structure that conductor app expects
+        ref.child(bus_stop_key).update({
+            "location": BUS_STOP_NAME,
+            "count": count,
+            "last_updated": datetime.now().isoformat()
         })
-        print(f"Firebase updated: {bus_stop} = {count}")
+        print(f"Firebase updated: {BUS_STOP_NAME} = {count}")
     except Exception as e:
         print(f"Firebase update failed: {e}")
 
+def get_current_count():
+    try:
+        ref = db.reference(f"bus_stops/{BUS_STOP_KEY}")
+        data = ref.get()
+        if data and "count" in data:
+            return data["count"]
+        else:
+            return 0
+    except Exception as e:
+        print(f"Failed to get current count: {e}")
+        return 0
+
 model = YOLO("yolov8n.pt")
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
     print("Error: Cannot open camera")
@@ -45,11 +62,26 @@ ENTRY_LINE_X = first_frame.shape[1] // 2
 # Track people crossing the line
 tracked_people = {}  # {person_id: {"centroid": (x,y), "crossed": False, "side": "left"/"right", "frame_count": 0}}
 next_person_id = 0
-passenger_count = 0
 DISAPPEAR_THRESHOLD = 30  # Frames before removing a person from tracking
 
-# Initialize Firebase
-update_count(BUS_STOP_NAME, passenger_count)
+# Get current count from Firebase instead of starting at 0
+def get_current_count():
+    try:
+        ref = db.reference("bus_stops")
+        data = ref.get()
+        if data and BUS_STOP_NAME in data:
+            return data[BUS_STOP_NAME]
+        else:
+            return 0
+    except Exception as e:
+        print(f"Failed to get current count: {e}")
+        return 0
+
+passenger_count = get_current_count()
+print(f"Starting with current count: {passenger_count}")
+
+# Initialize Firebase with current count
+update_count(BUS_STOP_KEY, passenger_count)
 
 while True:
     ret, frame = cap.read()
@@ -114,7 +146,7 @@ while True:
                 if prev_side == "left" and current_side == "right":
                     tracked_people[best_match_id]["crossed"] = True
                     passenger_count += 1
-                    update_count(BUS_STOP_NAME, passenger_count)
+                    update_count(BUS_STOP_KEY, passenger_count)
                     print(f"Person crossed! Total: {passenger_count}")
             
             # Draw bounding box
