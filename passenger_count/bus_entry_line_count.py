@@ -7,24 +7,38 @@ from firebase_admin import credentials, db
 cred = credentials.Certificate("serviceAccountKey.json")
 
 firebase_admin.initialize_app(cred, {
-    "databaseURL": "https://smartbusai-bf6c1-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    "databaseURL": "https://sample-firebase-ai-app-208e2-default-rtdb.firebaseio.com/"
 })
 
 # Bus stop name - change this as needed
-BUS_STOP_NAME = "Chennai"
+BUS_STOP_NAME = "stop1"
 
 def update_count(bus_stop, count):
     try:
         ref = db.reference("bus_stops")
+        
+        # Get current data to preserve ticket distribution
+        current_data = ref.child(bus_stop).get()
+        current_ticket_dist = 0
+        if current_data and isinstance(current_data, dict):
+            current_ticket_dist = current_data.get('ticket_distribution', 0)
+        
+        # Update only count, preserve ticket distribution
         ref.update({
-            bus_stop: count
+            bus_stop: {
+                "location": "Koyambedu",
+                "count": count,
+                "ticket_distribution": current_ticket_dist,  # Preserve existing tickets
+                "status": "checked" if count == current_ticket_dist else "unchecked",
+                "last_updated": "2026-03-12T11:21:00.000Z"
+            }
         })
-        print(f"Firebase updated: {bus_stop} = {count}")
+        print(f"Firebase updated: {bus_stop} count={count}, tickets={current_ticket_dist}")
     except Exception as e:
         print(f"Firebase update failed: {e}")
 
 model = YOLO("yolov8n.pt")
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
     print("Error: Cannot open camera")

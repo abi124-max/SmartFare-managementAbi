@@ -2,13 +2,13 @@
 
 // Firebase Configuration
 const firebaseConfig = {
-    apiKey: "your-api-key",
-    authDomain: "your-project-id.firebaseapp.com",
-    databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "your-sender-id",
-    appId: "your-app-id"
+    apiKey: "AIzaSyDummyKeyForDemo",
+    authDomain: "sample-firebase-ai-app-208e2-default-rtdb.firebaseapp.com",
+    databaseURL: "https://sample-firebase-ai-app-208e2-default-rtdb.firebaseio.com",
+    projectId: "sample-firebase-ai-app-208e2-default-rtdb",
+    storageBucket: "sample-firebase-ai-app-208e2-default-rtdb.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef"
 };
 
 // Initialize Firebase
