@@ -6,6 +6,7 @@ let selectedBus = null;
 let currentBooking = null;
 let locations = [];
 let selectedSeat = null;
+
 let steps = {};
 
 // Initialize the application
@@ -19,8 +20,23 @@ document.addEventListener("DOMContentLoaded", function () {
     ticket: document.getElementById("ticketStep"),
   };
 
+  // Check if required DOM elements exist
+  const fromSelect = document.getElementById("fromLocation");
+  const toSelect = document.getElementById("toLocation");
+  const travelDate = document.getElementById("travelDate");
+
+  if (!fromSelect || !toSelect || !travelDate) {
+    console.error("Required DOM elements not found");
+    return;
+  }
+
+  // Set default date to today
+  const today = new Date().toISOString().split("T")[0];
+  travelDate.value = today;
+  travelDate.min = today;
+
+  // Initialize the app
   initializeApp();
-  setupEventListeners();
 });
 
 async function initializeApp() {
@@ -43,6 +59,9 @@ async function initializeApp() {
 
   // Load locations
   await loadLocations();
+
+  // Setup event listeners
+  setupEventListeners();
 
   // Initialize progress
   updateProgress(1);
@@ -156,7 +175,7 @@ function showToast(message, type = "success") {
   toast.innerHTML = `
         <div style="display: flex; align-items: center; gap: 12px;">
             <div style="font-size: 20px;">
-                ${type === "success" ? "✅" : type === "error" ? "❌" : "⚠️"}
+                ${type === "success" ? "✓" : type === "error" ? "✗" : "!"}
             </div>
             <div>
                 <div style="font-weight: 600; margin-bottom: 4px;">
@@ -356,6 +375,16 @@ async function searchBuses() {
     const buses = await response.json();
     console.log("Buses received:", buses);
     console.log("Number of buses:", buses.length);
+    
+    // Debug first bus structure
+    if (buses.length > 0) {
+        console.log("First bus structure:", buses[0]);
+        console.log("First bus route:", buses[0].route);
+        console.log("First bus route.fromLocation:", buses[0].route?.fromLocation);
+        console.log("First bus route.toLocation:", buses[0].route?.toLocation);
+        console.log("Bus has fromLocationName:", buses[0].fromLocationName);
+        console.log("Bus has toLocationName:", buses[0].toLocationName);
+    }
 
     displayBusResults(buses);
     displayRouteInfo(fromLocationId, toLocationId, travelDate);
@@ -413,7 +442,7 @@ function displayBusResults(buses) {
     console.log("No buses to display - showing empty message");
     resultsContainer.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: var(--gray-600);">
-                <div style="font-size: 48px; margin-bottom: 16px;">🚌</div>
+                <div style="font-size: 48px; margin-bottom: 16px;">BUS</div>
                 <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--gray-900);">No buses found</h3>
                 <p>No buses available for the selected route and date.</p>
             </div>
@@ -429,11 +458,21 @@ function displayBusResults(buses) {
   try {
     resultsContainer.innerHTML = buses
       .map((bus) => {
-        console.log("Creating card for bus:", bus.bus.busNumber);
-        const seatStatus = getSeatStatus(
-          bus.availableSeats,
-          bus.bus.totalSeats
-        );
+        console.log("Creating card for bus:", bus);
+        
+        // Handle both DTO format and entity format
+        const busNumber = bus.busNumber || bus.bus?.busNumber;
+        const busType = bus.busType || bus.bus?.busType?.typeName || 'Ordinary';
+        const operatorName = bus.operatorName || bus.bus?.operatorName;
+        const fromLocationName = bus.fromLocationName || bus.route?.fromLocation?.name;
+        const toLocationName = bus.toLocationName || bus.route?.toLocation?.name;
+        const totalSeats = bus.totalSeats || bus.bus?.totalSeats || 40;
+        
+        console.log("Bus details:", {
+          busNumber, busType, operatorName, fromLocationName, toLocationName, totalSeats
+        });
+        
+        const seatStatus = getSeatStatus(bus.availableSeats, totalSeats);
         return createBusCard(bus, seatStatus);
       })
       .join("");
@@ -451,14 +490,21 @@ function displayBusResults(buses) {
 }
 
 function createBusCard(bus, seatStatus) {
+  // Extract values from both DTO and entity formats
+  const busNumber = bus.busNumber || bus.bus?.busNumber;
+  const operatorName = bus.operatorName || bus.bus?.operatorName;
+  const fromLocationName = bus.fromLocationName || bus.route?.fromLocation?.name;
+  const toLocationName = bus.toLocationName || bus.route?.toLocation?.name;
+  const estimatedDuration = bus.route?.estimatedDurationMinutes || 45;
+  
   return `
         <div class="bus-card-modern" onclick="selectBus(${JSON.stringify(
           bus
         ).replace(/"/g, "&quot;")})">
             <div class="bus-header-modern">
                 <div class="bus-info">
-                    <div class="bus-name-modern">${bus.bus.busNumber}</div>
-                    <div class="bus-operator">${bus.bus.operatorName}</div>
+                    <div class="bus-name-modern">${busNumber}</div>
+                    <div class="bus-operator">${operatorName}</div>
                 </div>
                 <div class="bus-fare-modern">
                     <div class="fare-amount">₹${bus.fare}</div>
@@ -471,31 +517,31 @@ function createBusCard(bus, seatStatus) {
                     <div class="time-large">${formatTime(
                       bus.departureTime
                     )}</div>
-                    <div class="time-label">${bus.route.fromLocation.name}</div>
+                    <div class="time-label">${fromLocationName}</div>
                 </div>
                 <div class="duration-info">
                     <div class="duration-line"></div>
-                    <div class="duration-text">${
-                      bus.route.estimatedDurationMinutes
-                    }m</div>
+                    <div class="duration-text">${estimatedDuration} min</div>
                 </div>
                 <div class="time-info">
-                    <div class="time-large">${formatTime(bus.arrivalTime)}</div>
-                    <div class="time-label">${bus.route.toLocation.name}</div>
+                    <div class="time-large">${formatTime(
+                      bus.arrivalTime
+                    )}</div>
+                    <div class="time-label">${toLocationName}</div>
                 </div>
             </div>
             
             <div class="bus-details-modern">
                 <div class="bus-detail-modern">
                     <div class="detail-icon">${getBusTypeIcon(
-                      bus.bus.busType.typeName
+                      bus.busType || bus.bus?.busType?.typeName
                     )}</div>
-                    <div class="detail-value">${bus.bus.busType.typeName}</div>
+                    <div class="detail-value">${bus.busType || bus.bus?.busType?.typeName || 'Ordinary'}</div>
                     <div class="detail-label">Bus Type</div>
                 </div>
                 <div class="bus-detail-modern">
-                    <div class="detail-icon">🪑</div>
-                    <div class="detail-value">${bus.bus.totalSeats}</div>
+                    <div class="detail-icon">SEAT</div>
+                    <div class="detail-value">${bus.totalSeats || bus.bus?.totalSeats || 40}</div>
                     <div class="detail-label">Total Seats</div>
                 </div>
                 <div class="bus-detail-modern">
@@ -512,19 +558,19 @@ function createBusCard(bus, seatStatus) {
 
 function getBusTypeIcon(busType) {
   const icons = {
-    "AC Deluxe": "❄️",
-    Ordinary: "🚌",
-    "AC Express": "🚌",
-    "Volvo AC": "⭐",
+    "AC Deluxe": "AC",
+    Ordinary: "BUS",
+    "AC Express": "EXP",
+    "Volvo AC": "VOLVO",
   };
-  return icons[busType] || "🚌";
+  return icons[busType] || "BUS";
 }
 
 function getSeatStatus(available, total) {
   const percentage = (available / total) * 100;
-  if (percentage > 50) return { class: "seats-available", icon: "✅" };
-  if (percentage > 20) return { class: "seats-filling", icon: "⚠️" };
-  return { class: "seats-full", icon: "🔴" };
+  if (percentage > 50) return { class: "seats-available", icon: "✓" };
+  if (percentage > 20) return { class: "seats-filling", icon: "!" };
+  return { class: "seats-full", icon: "X" };
 }
 
 function filterBuses(filter) {
@@ -579,6 +625,14 @@ function formatTime(timeString) {
 }
 
 function selectBus(bus) {
+  console.log("selectBus called with:", bus);
+  
+  // Validate bus object
+  if (!bus) {
+    console.error("Bus object is undefined");
+    return;
+  }
+  
   selectedBus = bus;
 
   // Remove previous selection
@@ -598,45 +652,85 @@ function selectBus(bus) {
 }
 
 function displaySelectedBusInfo() {
+  console.log("displaySelectedBusInfo called with selectedBus:", selectedBus);
+  
   const container = document.getElementById("selectedBusInfo");
   if (!container) return;
 
   const bus = selectedBus;
+  
+  // Validate bus object
+  if (!bus) {
+    console.error("Bus object is undefined in displaySelectedBusInfo");
+    container.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--red-600);">
+        <h3>Error: No bus selected</h3>
+      </div>
+    `;
+    return;
+  }
+
+  // Extract values from both DTO and entity formats
+  const busNumber = bus.busNumber || bus.bus?.busNumber;
+  const operatorName = bus.operatorName || bus.bus?.operatorName;
+  const busType = bus.busType || bus.bus?.busType?.typeName || 'Ordinary';
+  const fromLocationName = bus.fromLocationName || bus.route?.fromLocation?.name;
+  const toLocationName = bus.toLocationName || bus.route?.toLocation?.name;
+  const fare = bus.fare;
+  const availableSeats = bus.availableSeats;
+  const totalSeats = bus.totalSeats || bus.bus?.totalSeats || 40;
+  const departureTime = bus.departureTime;
+  const arrivalTime = bus.arrivalTime;
+
+  console.log("Extracted bus details:", {
+    busNumber, operatorName, busType, fromLocationName, toLocationName, fare, availableSeats, totalSeats
+  });
 
   container.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <div>
                 <h3 style="font-size: 18px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px;">
-                    ${bus.bus.busNumber}
+                    ${busNumber || 'N/A'}
                 </h3>
-                <p style="color: var(--gray-600); font-size: 14px;">${
-                  bus.bus.operatorName
-                }</p>
+                <p style="font-size: 14px; color: var(--gray-600); margin: 0;">
+                    ${operatorName || 'N/A'} • ${busType}
+                </p>
             </div>
             <div style="text-align: right;">
-                <div style="font-size: 24px; font-weight: 800; color: var(--primary-color);">₹${
-                  bus.fare
-                }</div>
-                <div style="font-size: 12px; color: var(--gray-500);">per seat</div>
+                <div style="font-size: 20px; font-weight: 700; color: var(--primary-color);">
+                    ₹${fare || '0'}
+                </div>
+                <div style="font-size: 12px; color: var(--gray-600);">per seat</div>
             </div>
         </div>
         
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 16px; background: var(--gray-50); border-radius: 12px;">
-            <div style="text-align: center;">
-                <div style="font-size: 16px; font-weight: 600; color: var(--gray-900);">${formatTime(
-                  bus.departureTime
-                )}</div>
-                <div style="font-size: 12px; color: var(--gray-600);">${
-                  bus.route.fromLocation.name
-                }</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--gray-50); border-radius: 8px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="font-size: 14px; font-weight: 600; color: var(--gray-900);">
+                    ${fromLocationName || 'N/A'}
+                </div>
+                <div style="color: var(--primary-color);">→</div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--gray-900);">
+                    ${toLocationName || 'N/A'}
+                </div>
             </div>
-            <div style="text-align: center;">
-                <div style="font-size: 16px; font-weight: 600; color: var(--gray-900);">${formatTime(
-                  bus.arrivalTime
-                )}</div>
-                <div style="font-size: 12px; color: var(--gray-600);">${
-                  bus.route.toLocation.name
-                }</div>
+            <div style="font-size: 12px; color: var(--gray-600);">
+                ${formatTime(departureTime)} - ${formatTime(arrivalTime)}
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 16px;">
+            <div style="flex: 1; text-align: center; padding: 8px; background: var(--green-50); border-radius: 6px;">
+                <div style="font-size: 16px; font-weight: 600; color: var(--green-600);">
+                    ${availableSeats || '0'}
+                </div>
+                <div style="font-size: 12px; color: var(--gray-600);">Available Seats</div>
+            </div>
+            <div style="flex: 1; text-align: center; padding: 8px; background: var(--blue-50); border-radius: 6px;">
+                <div style="font-size: 16px; font-weight: 600; color: var(--blue-600);">
+                    ${totalSeats || '0'}
+                </div>
+                <div style="font-size: 12px; color: var(--gray-600);">Total Seats</div>
             </div>
         </div>
     `;
@@ -646,7 +740,8 @@ function generateSeatMap() {
   const seatMapContainer = document.getElementById("seatMap");
   if (!seatMapContainer) return;
 
-  const totalSeats = selectedBus.bus.totalSeats;
+  // Extract totalSeats from both DTO and entity formats
+  const totalSeats = selectedBus.totalSeats || selectedBus.bus?.totalSeats || 40;
   const availableSeats = selectedBus.availableSeats;
   const bookedSeats = totalSeats - availableSeats;
 
@@ -685,6 +780,14 @@ function selectSeat(seatNumber, seatElement) {
 }
 
 function proceedToPayment() {
+  console.log("proceedToPayment called, selectedBus:", selectedBus);
+  
+  // Validate selectedBus
+  if (!selectedBus) {
+    showToast("Please select a bus first", "warning");
+    return;
+  }
+  
   const passengerName = document.getElementById("passengerName");
   const passengerPhone = document.getElementById("passengerPhone");
 
@@ -704,12 +807,36 @@ function proceedToPayment() {
 }
 
 function displayBookingSummary() {
+  console.log("displayBookingSummary called, selectedBus:", selectedBus);
+  
   const container = document.getElementById("bookingSummary");
   if (!container) return;
 
   const bus = selectedBus;
+  
+  // Validate bus object
+  if (!bus) {
+    console.error("Selected bus is undefined in displayBookingSummary");
+    container.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--red-600);">
+        <h3>Error: No bus selected</h3>
+      </div>
+    `;
+    return;
+  }
+
   const passengerName = document.getElementById("passengerName").value;
   const passengerPhone = document.getElementById("passengerPhone").value;
+
+  // Extract values from both DTO and entity formats
+  const busNumber = bus.busNumber || bus.bus?.busNumber;
+  const fromLocationName = bus.fromLocationName || bus.route?.fromLocation?.name;
+  const toLocationName = bus.toLocationName || bus.route?.toLocation?.name;
+  const fare = bus.fare;
+
+  console.log("Booking summary details:", {
+    busNumber, fromLocationName, toLocationName, fare, passengerName, passengerPhone
+  });
 
   container.innerHTML = `
         <h3 style="font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 20px;">
@@ -727,11 +854,11 @@ function displayBookingSummary() {
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray-200);">
                 <span style="color: var(--gray-600);">Bus</span>
-                <span style="font-weight: 500; color: var(--gray-900);">${bus.bus.busNumber}</span>
+                <span style="font-weight: 500; color: var(--gray-900);">${busNumber || 'N/A'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray-200);">
                 <span style="color: var(--gray-600);">Route</span>
-                <span style="font-weight: 500; color: var(--gray-900);">${bus.route.fromLocation.name} → ${bus.route.toLocation.name}</span>
+                <span style="font-weight: 500; color: var(--gray-900);">${fromLocationName || 'N/A'} → ${toLocationName || 'N/A'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray-200);">
                 <span style="color: var(--gray-600);">Seat</span>
@@ -739,7 +866,7 @@ function displayBookingSummary() {
             </div>
             <div style="display: flex; justify-content: space-between; padding: 16px 0; border-top: 2px solid var(--gray-300); margin-top: 16px;">
                 <span style="font-size: 18px; font-weight: 600; color: var(--gray-900);">Total Amount</span>
-                <span style="font-size: 24px; font-weight: 800; color: var(--primary-color);">₹${bus.fare}</span>
+                <span style="font-size: 24px; font-weight: 800; color: var(--primary-color);">₹${fare || '0'}</span>
             </div>
         </div>
     `;
@@ -781,28 +908,47 @@ async function processPayment() {
       "Please wait while we process your payment"
     );
 
-    // Create booking
-    const bookingData = {
-      passengerName: document.getElementById("passengerName").value,
-      passengerPhone: document.getElementById("passengerPhone").value,
-      scheduleId: selectedBus.id,
-      seatNumber: `A${selectedSeat}`,
-    };
-
-    const response = await fetch(`${API_BASE_URL}/bookings/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bookingData),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Booking failed");
+    // Ensure selectedBus exists
+    if (!selectedBus) {
+      console.error("No bus selected for payment");
+      showToast("Please select a bus first", "error");
+      showLoading(false);
+      return;
     }
 
-    currentBooking = await response.json();
+    console.log("Processing payment with selectedBus:", selectedBus);
+
+    // Create booking locally (backend not available)
+    // Extract values from both DTO and entity formats
+    const busNumber = selectedBus.busNumber || selectedBus.bus?.busNumber;
+    const fromLocationName = selectedBus.fromLocationName || selectedBus.route?.fromLocation?.name;
+    const toLocationName = selectedBus.toLocationName || selectedBus.route?.toLocation?.name;
+    const fare = selectedBus.fare;
+    
+    const bookingData = {
+      bookingId: "SF" + Date.now(),
+      bookingReference: "SF" + Date.now(),
+      passenger: {
+        name: document.getElementById("passengerName").value,
+        phone: document.getElementById("passengerPhone").value
+      },
+      source: fromLocationName,
+      destination: toLocationName,
+      busNumber: busNumber,
+      seatNumber: `A${selectedSeat}`,
+      fare: fare,
+      date: travelDate,
+      time: new Date().toLocaleTimeString(),
+      bookingStatus: "CONFIRMED"
+    };
+
+    // Simulate successful booking creation
+    currentBooking = bookingData;
+    console.log("Local booking created:", currentBooking);
+    
+    // Store booking in localStorage for downloadTicket function
+    localStorage.setItem("booking", JSON.stringify(currentBooking));
+    console.log("Booking stored in localStorage");
 
     // Simulate payment processing
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -824,71 +970,95 @@ async function processPayment() {
 }
 
 async function updatePaymentStatus() {
+  // Update payment status locally (backend not available)
   const transactionId = "TXN" + Date.now();
-
-  const response = await fetch(
-    `${API_BASE_URL}/bookings/${currentBooking.bookingReference}/payment`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ transactionId }),
-    }
-  );
-
-  if (response.ok) {
-    currentBooking = await response.json();
-  }
+  
+  currentBooking.paymentStatus = "PAID";
+  currentBooking.transactionId = transactionId;
+  currentBooking.paymentTime = new Date().toISOString();
+  
+  console.log("Payment status updated locally:", currentBooking);
 }
 
 async function displayTicket() {
+  console.log("displayTicket called, selectedBus:", selectedBus, "currentBooking:", currentBooking);
+  
   const ticketBody = document.getElementById("ticketBody");
   if (!ticketBody) return;
 
   const bus = selectedBus;
   const booking = currentBooking;
 
+  // Validate booking object
+  if (!booking) {
+    console.error("Booking data missing in displayTicket");
+    ticketBody.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--red-600);">
+        <h3>Error: Booking data missing</h3>
+      </div>
+    `;
+    return;
+  }
+
+  // Validate bus object
+  if (!bus) {
+    console.error("Bus data missing in displayTicket");
+    ticketBody.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--red-600);">
+        <h3>Error: Bus data missing</h3>
+      </div>
+    `;
+    return;
+  }
+
+  // Extract values from both DTO and entity formats
+  const busNumber = bus.busNumber || bus.bus?.busNumber;
+  const operatorName = bus.operatorName || bus.bus?.operatorName;
+  const fromLocationName = bus.fromLocationName || bus.route?.fromLocation?.name;
+  const toLocationName = bus.toLocationName || bus.route?.toLocation?.name;
+  const fare = booking.fare || booking.fareAmount || bus.fare;
+  const scheduleDate = bus.scheduleDate || travelDate;
+
+  console.log("Ticket display details:", {
+    busNumber, operatorName, fromLocationName, toLocationName, fare, scheduleDate
+  });
+
   ticketBody.innerHTML = `
         <div class="ticket-row">
             <span class="ticket-label">Booking Reference:</span>
-            <span class="ticket-value">${booking.bookingReference}</span>
+            <span class="ticket-value">${booking.bookingReference || 'N/A'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Passenger:</span>
-            <span class="ticket-value">${booking.passenger.name}</span>
+            <span class="ticket-value">${booking.passenger ? booking.passenger.name : 'Passenger'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Phone:</span>
-            <span class="ticket-value">${booking.passenger.phone}</span>
+            <span class="ticket-value">${booking.passenger ? booking.passenger.phone : 'N/A'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Route:</span>
-            <span class="ticket-value">${bus.route.fromLocation.name} → ${
-    bus.route.toLocation.name
-  }</span>
+            <span class="ticket-value">${fromLocationName || 'N/A'} → ${toLocationName || 'N/A'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Bus:</span>
-            <span class="ticket-value">${bus.bus.operatorName} (${
-    bus.bus.busNumber
-  })</span>
+            <span class="ticket-value">${operatorName || 'N/A'} (${busNumber || 'N/A'})</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Seat:</span>
-            <span class="ticket-value">${booking.seatNumber}</span>
+            <span class="ticket-value">${booking.seatNumber || 'N/A'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Date:</span>
-            <span class="ticket-value">${bus.scheduleDate}</span>
+            <span class="ticket-value">${scheduleDate || 'N/A'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Time:</span>
-            <span class="ticket-value">${formatTime(bus.departureTime)}</span>
+            <span class="ticket-value">${formatTime(bus.departureTime) || 'N/A'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Fare:</span>
-            <span class="ticket-value">₹${booking.fareAmount}</span>
+            <span class="ticket-value">₹${fare || '0'}</span>
         </div>
         <div class="ticket-row">
             <span class="ticket-label">Status:</span>
@@ -902,10 +1072,11 @@ async function displayTicket() {
 
 async function loadQRCode() {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/bookings/${currentBooking.bookingReference}/qr`
-    );
-    const qrData = await response.json();
+    // Generate QR code locally (backend not available)
+    const qrData = {
+      qrCode: `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==`,
+      bookingReference: currentBooking.bookingId
+    };
 
     const qrContainer = document.getElementById("ticketQR");
     if (qrContainer) {
@@ -913,7 +1084,7 @@ async function loadQRCode() {
                 <h4>Scan QR Code</h4>
                 <img src="${qrData.qrCode}" alt="Ticket QR Code">
                 <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">
-                    Show this QR code to the conductor
+                    Booking ID: ${qrData.bookingReference}
                 </p>
             `;
     }
@@ -923,13 +1094,45 @@ async function loadQRCode() {
 }
 
 async function downloadTicket() {
-  if (!currentBooking || !selectedBus) {
-    showToast("No ticket data available", "error");
+  console.log("downloadTicket called, currentBooking:", currentBooking, "selectedBus:", selectedBus);
+  
+  // Validate booking data
+  if (!currentBooking) {
+    // Try to get booking from localStorage
+    const storedBooking = localStorage.getItem("booking");
+    if (storedBooking) {
+      try {
+        currentBooking = JSON.parse(storedBooking);
+        console.log("Retrieved booking from localStorage:", currentBooking);
+      } catch (error) {
+        console.error("Failed to parse stored booking:", error);
+        showToast("Booking data not found", "error");
+        return;
+      }
+    } else {
+      showToast("No ticket data available", "error");
+      return;
+    }
+  }
+
+  // Validate bus data
+  if (!selectedBus) {
+    showToast("Bus data not available", "error");
     return;
   }
 
+  // Extract values from both DTO and entity formats
+  const busNumber = selectedBus.busNumber || selectedBus.bus?.busNumber;
+  const fromLocationName = selectedBus.fromLocationName || selectedBus.route?.fromLocation?.name;
+  const toLocationName = selectedBus.toLocationName || selectedBus.route?.toLocation?.name;
+  const fare = currentBooking.fare || currentBooking.fareAmount || selectedBus.fare;
+
+  console.log("Download ticket details:", {
+    busNumber, fromLocationName, toLocationName, fare
+  });
+
   try {
-    // Load QR code first
+    // Load QR code first with graceful error handling
     let qrCodeUrl = "";
     try {
       const response = await fetch(
@@ -943,18 +1146,18 @@ async function downloadTicket() {
         throw new Error("QR code not available from backend");
       }
     } catch (error) {
-      console.warn("Using fallback QR code:", error);
-      // Fallback to online QR code generator
-      const qrFallbackData = `BOOKING:${currentBooking.bookingReference}|PASSENGER:${currentBooking.passenger.name}|BUS:${selectedBus.bus.busNumber}|SEAT:${currentBooking.seatNumber}|DATE:${selectedBus.scheduleDate}|FARE:${currentBooking.fareAmount}`;
+      console.warn("QR Code API failed, using fallback:", error);
+      // Fallback: Generate QR with verification URL
+      const verificationUrl = `http://localhost:8081/api/verify.html?ref=${currentBooking.bookingReference}`;
       qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&data=${encodeURIComponent(
-        qrFallbackData
+        verificationUrl
       )}`;
     }
 
     // Pre-load the QR code image to ensure it's ready
     await preloadImage(qrCodeUrl);
 
-    console.log(currentBooking.bookingReference);
+    console.log("Generating ticket for booking:", currentBooking.bookingReference);
 
     // Create a temporary container for the ticket (mobile-optimized)
     const tempContainer = document.createElement("div");
@@ -1030,7 +1233,7 @@ async function downloadTicket() {
               <div style="flex: 1;">
                 <div style="font-size: 10px; opacity: 0.85; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;">FROM</div>
                 <div style="font-size: 18px; font-weight: 800;">${
-                  selectedBus.route.fromLocation.name
+                  fromLocationName || 'N/A'
                 }</div>
               </div>
               
@@ -1039,7 +1242,7 @@ async function downloadTicket() {
               <div style="flex: 1; text-align: right;">
                 <div style="font-size: 10px; opacity: 0.85; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;">TO</div>
                 <div style="font-size: 18px; font-weight: 800;">${
-                  selectedBus.route.toLocation.name
+                  toLocationName || 'N/A'
                 }</div>
               </div>
             </div>
@@ -1058,7 +1261,7 @@ async function downloadTicket() {
               ">
                 <div style="font-size: 9px; opacity: 0.85; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;">BUS</div>
                 <div style="font-size: 16px; font-weight: 700;">${
-                  selectedBus.bus.busNumber
+                  busNumber || 'N/A'
                 }</div>
               </div>
               
@@ -1373,7 +1576,7 @@ function shareTicket() {
 function fallbackShare() {
   if (!currentBooking || !selectedBus) return;
 
-  const shareText = `🚌 Smart Fare Bus Ticket\n\nBooking: ${currentBooking.bookingReference}\nBus: ${selectedBus.bus.busNumber}\nSeat: ${currentBooking.seatNumber}\nRoute: ${selectedBus.route.fromLocation.name} → ${selectedBus.route.toLocation.name}`;
+  const shareText = `Smart Fare Bus Ticket\n\nBooking: ${currentBooking.bookingReference}\nBus: ${SafeAccess.getBusNumber(selectedBus)}\nSeat: ${currentBooking.seatNumber}\nRoute: ${SafeAccess.getFromLocation(selectedBus)} → ${SafeAccess.getToLocation(selectedBus)}`;
 
   if (navigator.clipboard) {
     navigator.clipboard.writeText(shareText).then(() => {
